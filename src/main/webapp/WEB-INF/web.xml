@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee" version="3.0">
+    <servlet>
+        <servlet-name>game</servlet-name>
+        <servlet-class>com.utopia.GameServlet</servlet-class>
+    </servlet>
+     
+    <servlet-mapping>
+        <servlet-name>game</servlet-name>
+        <url-pattern>/*</url-pattern>
+    </servlet-mapping>
+</web-app>
