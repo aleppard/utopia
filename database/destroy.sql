@@ -1,6 +1,6 @@
 -- \i destroy.sql
-DROP TABLE tokens;
 DROP TABLE users;
+DROP TABLE tokens;
 DROP TABLE tiles;
-DROP TABLE tile_sets;
+DROP TABLE gamp_map;
 DROP TABLE user_traversals;

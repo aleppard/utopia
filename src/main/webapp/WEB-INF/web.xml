@@ -4,7 +4,17 @@
         <servlet-name>game</servlet-name>
         <servlet-class>com.utopia.GameServlet</servlet-class>
     </servlet>
-     
+
+    <servlet>
+        <servlet-name>map</servlet-name>
+        <servlet-class>com.utopia.MapServlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>map</servlet-name>
+        <url-pattern>/api/v0/map.json</url-pattern>
+    </servlet-mapping>
+    
     <servlet-mapping>
         <servlet-name>game</servlet-name>
         <url-pattern>/*</url-pattern>

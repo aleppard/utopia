@@ -31,6 +31,16 @@
       <version>1.9.9</version>
     </dependency>
     <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.3.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.9.0</version>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
@@ -105,9 +115,9 @@
               <type>runtime</type>
               <properties>
                 <cargo.server.settings>utopia</cargo.server.settings>
-                <cargo.remote.username>utopia</cargo.remote.username>
-                <cargo.remote.password>PASSWORD</cargo.remote.password>
-                <cargo.hostname>SERVER</cargo.hostname>
+                <cargo.remote.username>${tomcat.username}</cargo.remote.username>
+                <cargo.remote.password>${tomcat.password}</cargo.remote.password>
+                <cargo.hostname>${tomcat.host}</cargo.hostname>
               </properties>
             </configuration>
           </configuration>
