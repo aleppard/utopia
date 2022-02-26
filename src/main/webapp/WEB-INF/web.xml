@@ -10,10 +10,30 @@
         <servlet-class>com.utopia.MapServlet</servlet-class>
     </servlet>
 
+    <servlet>
+        <servlet-name>tile</servlet-name>
+        <servlet-class>com.utopia.TileServlet</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>tile_image</servlet-name>
+        <servlet-class>com.utopia.TileImageServlet</servlet-class>
+    </servlet>    
+    
     <servlet-mapping>
         <servlet-name>map</servlet-name>
         <url-pattern>/api/v0/map.json</url-pattern>
     </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>tile</servlet-name>
+        <url-pattern>/api/v0/tile.json</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>tile_image</servlet-name>
+        <url-pattern>/api/v0/tile.png</url-pattern>
+    </servlet-mapping>    
     
     <servlet-mapping>
         <servlet-name>game</servlet-name>

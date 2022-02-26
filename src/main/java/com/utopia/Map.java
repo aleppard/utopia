@@ -13,6 +13,7 @@ public class Map
     public int width;
     public int height;
     public List<Integer>[][] tiles;
+    public Boolean[][] isTraverseable;
 
     Map(int startX, int startY, int width, int height) {
         this.startX = startX;
@@ -20,5 +21,6 @@ public class Map
         this.width = width;
         this.height = height;
         this.tiles = (ArrayList<Integer>[][])new ArrayList[height][width];
+        this.isTraverseable = new Boolean[height][width];
     }
 }

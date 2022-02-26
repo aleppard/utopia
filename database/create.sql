@@ -20,14 +20,26 @@ CREATE TABLE IF NOT EXISTS tokens(
 
 CREATE INDEX IF NOT EXISTS tokens_token_index ON tokens(token);
 
+CREATE TABLE IF NOT EXISTS items(
+       id SERIAL PRIMARY KEY,
+       item_name VARCHAR(32) NOT NULL UNIQUE,
+       description VARCHAR(256));
+
+CREATE TABLE IF NOT EXISTS inventory(
+       id SERIAL PRIMARY KEY,
+       item_id INTEGER REFERENCES items NOT NULL,
+       user_id INTEGER REFERENCES users NOT NULL,
+       item_count INTEGER NOT NULL);
+
 CREATE TYPE tile_enum AS ENUM ('land', 'water');
 
+-- @todo Move tile images into separate table.
 CREATE TABLE IF NOT EXISTS tiles(
        id SERIAL PRIMARY KEY,
-       tile_number INTEGER NOT NULL,
-       type_type tile_enum NOT NULL,
+       tile_type tile_enum NOT NULL,
        is_traverseable BOOLEAN NOT NULL,
-       is_opauqe BOOLEAN NOT NULL,
+       code VARCHAR(4) NOT NULL UNIQUE,
+       image BYTEA,
        description VARCHAR(128));
 
 CREATE TABLE IF NOT EXISTS game_map(
@@ -37,7 +49,8 @@ CREATE TABLE IF NOT EXISTS game_map(
        base_tile_id INTEGER REFERENCES tiles NOT NULL,
        overlay_tile1_id INTEGER REFERENCES tiles,
        overlay_tile2_id INTEGER REFERENCES tiles,
-       overlay_tile3_id INTEGER REFERENCES tiles);
+       overlay_tile3_id INTEGER REFERENCES tiles,
+       is_traverseable BOOLEAN NOT NULL);
 
 CREATE TABLE IF NOT EXISTS user_traversals(
        x INTEGER NOT NULL,

@@ -1,75 +1,55 @@
 package com.utopia;
 
-import java.io.InputStream;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  *
  */
-public class MapService implements AutoCloseable
+public class MapService extends Service
 {
     private static final Logger LOGGER =
         Logger.getLogger(MapService.class.getName());
     
-    private Connection connection;
-
     private int minX = 0;
     private int minY = 0;
     private int maxX = 0;
     private int maxY = 0;
+
+    private TileService tileService = new TileService();
     
     public MapService() {
-        try (InputStream input =
-             MapService.class.getClassLoader().getResourceAsStream("config.properties")) {            
-            Properties properties = new Properties();
-            properties.load(input);
+        findMinMax();
+    }
 
-            // Load PostgreSQL driver.
-            Class.forName("org.postgresql.Driver");
+    private void findMinMax() {
+        try {
+            PreparedStatement preparedStatement =
+                getConnection().prepareStatement("SELECT MIN(x), MAX(x), MIN(y), MAX(y) FROM game_map");
+            ResultSet resultSet = preparedStatement.executeQuery();
             
-            connection = DriverManager.getConnection
-                ("jdbc:postgresql://" +
-                 properties.getProperty("database.host") + ":" +
-                 properties.getProperty("database.port") + "/utopia",
-                 properties.getProperty("database.user"),
-                 properties.getProperty("database.password"));
-            if (connection == null) throw new Exception();
-            
-            findMinMax();
+            resultSet.next();
+            minX = resultSet.getInt(1);
+            maxX = resultSet.getInt(2);
+            minY = resultSet.getInt(3);
+            maxY = resultSet.getInt(4);
         }
         catch (SQLException exception) {
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
+            // @todo
         }
-        catch (Exception exception) {
-            LOGGER.log(Level.SEVERE,
-                       "Error connection to PostgreSQL.",
-                       exception);
-        }
-    }
-
-    private void findMinMax() throws SQLException {
-        PreparedStatement preparedStatement =
-            connection.prepareStatement("SELECT MIN(x), MAX(x), MIN(y), MAX(y) FROM game_map");
-        ResultSet resultSet = preparedStatement.executeQuery();
-        
-        resultSet.next();
-        minX = resultSet.getInt(0);
-        maxX = resultSet.getInt(1);
-        minY = resultSet.getInt(2);
-        maxY = resultSet.getInt(3);                                    
     }
     
     public int getWidth() {
@@ -91,7 +71,7 @@ public class MapService implements AutoCloseable
                               getWidth(),
                               getHeight());
             PreparedStatement preparedStatement =
-                connection.prepareStatement("SELECT * FROM game_map ORDER BY y, x");
+                getConnection().prepareStatement("SELECT * FROM game_map ORDER BY y, x");
             ResultSet resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
@@ -117,6 +97,8 @@ public class MapService implements AutoCloseable
                 }
                 
                 map.tiles[y - minY][x - minX] = tiles;
+                map.isTraverseable[y - minY][x - minX] =
+                    resultSet.getBoolean("is_traverseable");
             }
             
             return map;
@@ -130,8 +112,67 @@ public class MapService implements AutoCloseable
         }
     }
 
-    @Override
-    public void close() throws SQLException {
-        if (connection != null) connection.close();
+    private static boolean isTraverseable
+        (final HashMap<Integer, Boolean> traverseability,
+         final List<Integer> tileIds) {
+        for (final Integer tileId : tileIds) {
+            if (!traverseability.get(tileId)) return false;
+        }
+            
+        return true;
+    }
+    
+    public void setMap(Map map) {
+        HashMap<Integer, Boolean> traverseability =
+            tileService.getTraverseability();
+        
+        try {
+            PreparedStatement preparedStatement = getConnection().prepareStatement("INSERT INTO game_map (x, y, base_tile_id, overlay_tile1_id, overlay_tile2_id, overlay_tile3_id, is_traverseable) VALUES (?, ?, ?, ?, ?, ?, ?)");           
+            for (int i = 0; i < map.height; i++) {
+                int y = map.startY + i;
+                
+                for (int j = 0; j < map.width; j++) {
+                    int x = map.startX + j;
+
+                    // @todo tiles -> tileIds.
+                    List<Integer> tiles = map.tiles[i][j];
+                    preparedStatement.setInt(1, x);
+                    preparedStatement.setInt(2, y);
+
+                    preparedStatement.setInt(3, tiles.get(0));
+                    if (tiles.size() > 1) {
+                        preparedStatement.setInt(4, tiles.get(1));
+                    }
+                    else {
+                        preparedStatement.setNull(4, Types.INTEGER);
+                    }
+
+                    if (tiles.size() > 2) {
+                        preparedStatement.setInt(5, tiles.get(2));
+                    }
+                    else {
+                        preparedStatement.setNull(5, Types.INTEGER);
+                    }
+
+                    if (tiles.size() > 3) {
+                        preparedStatement.setInt(6, tiles.get(3));
+                    }
+                    else {
+                        preparedStatement.setNull(6, Types.INTEGER);
+                    }                    
+
+                    preparedStatement.setBoolean
+                        (7, isTraverseable(traverseability, tiles));
+                    
+                    preparedStatement.executeUpdate();
+                }
+            }
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+            // MYTODO  - throws
+        }
     }
 }

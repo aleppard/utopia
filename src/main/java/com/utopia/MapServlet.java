@@ -1,6 +1,8 @@
 package com.utopia;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,9 +15,10 @@ import com.google.gson.Gson;
  */
 public class MapServlet extends HttpServlet
 {
+   private static final Logger LOGGER =
+       Logger.getLogger(MapServlet.class.getName());
+    
     /**
-     * Retrieve map meta-data.
-     *
      * GET /map.json
      */
     @Override public void doGet(HttpServletRequest request,
@@ -32,5 +35,19 @@ public class MapServlet extends HttpServlet
         Map map = service.getMap();
         Gson gson = new Gson();
         response.getWriter().print(gson.toJson(map));
+    }
+
+    /**
+     * POST /map.json
+     */
+    @Override public void doPost(HttpServletRequest request,
+                                 HttpServletResponse response)
+        throws IOException {
+
+        // @todo Secure this end-point.
+        Gson gson = new Gson();
+        Map map = gson.fromJson(request.getReader(), Map.class);
+        MapService service = new MapService();
+        service.setMap(map);
     }
 }
