@@ -1,5 +1,6 @@
 -- \i create.sql
 
+-- @todo We should store the IP address too.
 CREATE TABLE IF NOT EXISTS users(
        id SERIAL PRIMARY KEY,
        created_time TIMESTAMP NOT NULL,

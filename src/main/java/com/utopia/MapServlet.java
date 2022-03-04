@@ -17,6 +17,8 @@ public class MapServlet extends HttpServlet
 {
    private static final Logger LOGGER =
        Logger.getLogger(MapServlet.class.getName());
+
+    private MapService service = new MapService();
     
     /**
      * GET /map.json
@@ -31,7 +33,6 @@ public class MapServlet extends HttpServlet
         // memory in a compact binary format.
         response.setContentType("application/json; charset=utf-8");
 
-        MapService service = new MapService();
         Map map = service.getMap();
         Gson gson = new Gson();
         response.getWriter().print(gson.toJson(map));
@@ -47,7 +48,6 @@ public class MapServlet extends HttpServlet
         // @todo Secure this end-point.
         Gson gson = new Gson();
         Map map = gson.fromJson(request.getReader(), Map.class);
-        MapService service = new MapService();
         service.setMap(map);
     }
 }

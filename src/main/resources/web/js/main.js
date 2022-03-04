@@ -362,12 +362,12 @@ function loadImage(url) {
     });
 }
 
-const url = '/utopia/api/v0/map.json'
+const url = '/utopia/api/v0/session.json'
 fetch(url)
     .then(data => data.json())
     .then((json) => {
-        MAP = json.tiles
-        is_traverseable = json.isTraverseable
+        MAP = json.map.tiles
+        is_traverseable = json.map.isTraverseable
         
         // Find unique tiles.
         for (var y = 0; y < map_height; y++) {

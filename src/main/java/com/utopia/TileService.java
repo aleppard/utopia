@@ -48,7 +48,9 @@ public class TileService extends Service
     
     public void add(Tile tile) {
         try {
-            PreparedStatement preparedStatement = getConnection().prepareStatement("INSERT INTO tiles (is_traverseable, code, description, tile_type) VALUES (?, ?, ?, ?::tile_enum)");
+            PreparedStatement preparedStatement =
+                getConnection().prepareStatement
+                ("INSERT INTO tiles (is_traverseable, code, description, tile_type) VALUES (?, ?, ?, ?::tile_enum)");
             preparedStatement.setBoolean(1, tile.isTraverseable);
             preparedStatement.setString(2, tile.code);
             preparedStatement.setString(3, tile.description);

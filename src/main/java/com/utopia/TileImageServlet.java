@@ -48,7 +48,8 @@ public class TileImageServlet extends HttpServlet
         throws IOException {
 
         response.setContentType("image/png");
-        
+
+        // @todo Users shouldn't retrieve tiles one by one.
         final String idString = request.getParameter("id");
         try {
             long id = Long.parseLong(idString);

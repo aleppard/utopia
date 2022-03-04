@@ -13,6 +13,8 @@ import com.google.gson.Gson;
  */
 public class TileServlet extends HttpServlet
 {
+    private TileService service = new TileService();
+    
     /**
      * Add a new tile.
      *
@@ -27,7 +29,6 @@ public class TileServlet extends HttpServlet
 
         Gson gson = new Gson();
         Tile tile = gson.fromJson(request.getReader(), Tile.class);
-        TileService service = new TileService();
         service.add(tile);
     }
 }
