@@ -76,7 +76,6 @@ public class TokenService extends Service
                 getConnection().prepareStatement
                 ("SELECT id, created_time, user_id FROM tokens WHERE token=?");
             preparedStatement.setString(1, tokenString);
-            preparedStatement.executeQuery();
             
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
