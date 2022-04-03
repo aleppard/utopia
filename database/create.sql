@@ -1,6 +1,6 @@
 -- \i create.sql
 
--- @todo We should store the IP address too.
+-- @todo Change last_x, last_y to simply x and y.
 CREATE TABLE IF NOT EXISTS users(
        id SERIAL PRIMARY KEY,
        created_time TIMESTAMP NOT NULL,
@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS users(
 
 CREATE INDEX IF NOT EXISTS users_email_index ON users(email);
 
+-- @todo Tokens are like passwords. We should store them hashed using
+-- bcrypt or similar.
 CREATE TABLE IF NOT EXISTS tokens(
        id SERIAL PRIMARY KEY,
        created_time TIMESTAMP NOT NULL,
