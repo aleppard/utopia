@@ -112,6 +112,65 @@ public class MapService extends Service
         }
     }
 
+    public Map getMap(int startX, int startY, int width, int height) {
+        try {
+            startX = Math.max(startX, minY);
+            startY = Math.max(startY, minY);
+            width = Math.min(width, maxX - startX);
+            height = Math.min(height, maxY - startY);
+            
+            Map map = new Map(startX,
+                              startY,
+                              width,
+                              height);
+            PreparedStatement preparedStatement =
+                getConnection().prepareStatement("SELECT * FROM game_map WHERE x >= ? AND y >= ? AND x < ? AND y < ?  ORDER BY y, x ");
+            preparedStatement.setInt(1, startX);
+            preparedStatement.setInt(2, startY);
+            preparedStatement.setInt(3, startX + width);
+            preparedStatement.setInt(4, startY + width);
+            
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            // @todo Refactor
+            while (resultSet.next()) {
+                int x = resultSet.getInt("x");
+                int y = resultSet.getInt("y");
+
+                List<Integer> tiles = new ArrayList();
+                tiles.add(resultSet.getInt("base_tile_id"));
+
+                {
+                    int overlayTile1Id = resultSet.getInt("overlay_tile1_id");
+                    if (!resultSet.wasNull()) tiles.add(overlayTile1Id);
+                }
+
+                {
+                    int overlayTile2Id = resultSet.getInt("overlay_tile2_id");
+                    if (!resultSet.wasNull()) tiles.add(overlayTile2Id);
+                }
+
+                {
+                    int overlayTile3Id = resultSet.getInt("overlay_tile3_id");
+                    if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
+                }
+                
+                map.tiles[y - minY][x - minX] = tiles;
+                map.isTraverseable[y - minY][x - minX] =
+                    resultSet.getBoolean("is_traverseable");
+            }
+            
+            return map;
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+            // MYTODO  - throws
+            return null;
+        }
+    }
+
     private static boolean isTraverseable
         (final HashMap<Integer, Boolean> traverseability,
          final List<Integer> tileIds) {
