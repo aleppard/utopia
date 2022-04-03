@@ -85,4 +85,37 @@ public class SessionServlet extends HttpServlet
         
         response.getWriter().print(gson.toJson(session));
     }
+
+    /**
+     * PUT /session.json
+     *
+     * Update a user's last location.
+     *
+     * @todo Is this the best interface for doing this?
+     */
+    @Override public void doPut(HttpServletRequest request,
+                                HttpServletResponse response)
+        throws IOException {
+        
+        response.setContentType("application/json; charset=utf-8");
+
+        final Cookie cookie = findCookie(request);
+        if (cookie != null) {
+            final String tokenString = cookie.getValue();
+            final Token token = tokenService.findToken(tokenString);
+
+            Gson gson = new Gson();
+            Session session = gson.fromJson(request.getReader(),
+                                            Session.class);
+
+            // @todo Don't write every location update to the database.
+            // Cache the request for a period of time and then update
+            // later to minimise I/O.
+            // @todo Validate that the user can move to that location.
+            // @todo Rate limit movement.
+            userService.updateUserLastLocation(token.userId,
+                                               session.user.x,
+                                               session.user.y);
+        }
+    }
 }
