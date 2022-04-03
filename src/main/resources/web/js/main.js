@@ -303,6 +303,14 @@ function move_avatar(avatar_direction) {
     }
     
     draw_avatar()
+
+    var newLocation = { user: { x : avatar_x - 40, y : avatar_y - 40}};
+    
+    fetch('/utopia/api/v0/session.json',
+          {
+              method:'PUT',
+              body:JSON.stringify(newLocation)
+          }).then();
 }
 
 function draw() {
@@ -367,7 +375,15 @@ fetch(url)
     .then(data => data.json())
     .then((json) => {
         MAP = json.map.tiles
-        is_traverseable = json.map.isTraverseable
+        is_traverseable = json.map.isTraverseable;
+        avatar_x = json.user.x + 40;
+        avatar_y = json.user.y + 40;
+
+        // @todo We need to adjust this for screen size.
+        // @todo We should also take into account if the user is at the
+        // right or bottom edge of the map.
+        view_x = Math.max(avatar_x - 7, 0)
+        view_y = Math.max(avatar_y - 7, 0)
         
         // Find unique tiles.
         for (var y = 0; y < map_height; y++) {
