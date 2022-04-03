@@ -22,7 +22,7 @@ public class Service implements AutoCloseable
     
     private Connection connection;
 
-    public Service() {
+    private void open() {
         try (InputStream input =
              MapService.class.getClassLoader().getResourceAsStream("properties/database.properties")) {            
             Properties properties = new Properties();
@@ -50,8 +50,23 @@ public class Service implements AutoCloseable
                        exception);
         }
     }
+    
+    public Service() {
+        open();
+    }
 
     protected Connection getConnection() {
+        try {
+            if (connection.isClosed()) {
+                open();
+            }
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+        }
+
         return connection;
     }
 
