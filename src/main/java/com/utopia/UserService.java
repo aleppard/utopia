@@ -31,8 +31,8 @@ public class UserService extends Service
     
     public User createNewUser() {
         final OffsetDateTime now = OffsetDateTime.now();
-        final int x = -3;
-        final int y = -3;
+        final int x = 7;
+        final int y = 7;
         final String name = nameGenerator.generateName();
 
         try {
@@ -85,7 +85,6 @@ public class UserService extends Service
             ResultSet resultSet = preparedStatement.executeQuery();
             
             if (resultSet.next()) {
-                // @todo Set created and last seen times.
                 user.lastX = resultSet.getInt("last_x");
                 user.lastY = resultSet.getInt("last_y");
                 user.name = resultSet.getString("avatar_name");
@@ -98,5 +97,21 @@ public class UserService extends Service
                        exception);
         }
         return null;
+    }
+
+    public void updateUserLastLocation(long userId, int x, int y) {
+        try {
+            // @todo Also update user's last seen time.
+            PreparedStatement preparedStatement = getConnection().prepareStatement("UPDATE users SET last_x=?, last_y=? WHERE id=?");
+            preparedStatement.setInt(1, x);
+            preparedStatement.setInt(2, y);            
+            preparedStatement.setLong(3, userId);
+            preparedStatement.executeUpdate();
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+        }        
     }
 }
