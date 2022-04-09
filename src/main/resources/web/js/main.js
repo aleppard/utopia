@@ -13,48 +13,46 @@ var tile_size = 32;
 var tile_scale = 1; // TODO: Remove
 
 // Offset of view from start of map.
-var view_x = 40;
-var view_y = 40;
+var view_x = null
+var view_y = null
 
 var view_width;
 var view_height;
 
-// Offset of avatar from start of map.
-var avatar_x = view_x + 7;
-var avatar_y = view_y + 7;
+var avatar_x;
+var avatar_y;
 
-// 1 - North
-// 2 - East
-// 3 - South
-// 4 - West
-var last_avatar_direction = 3; // South
+const NORTH = "north"
+const EAST = "east"
+const SOUTH = "south"
+const WEST = "west"
+
+var last_avatar_direction;
 var avatar_margin = 5;
 
-var map_width = 100
-var map_height = 100
-var MAP;
+var map;
 var is_traverseable;
 var images = new Map();
 
-var visibility = Array(map_width * map_height).fill(0);
+var visibility;
 
 function update_visibility() {
     var made_visible = [];
-    // TODO: This could be made much faster!
-    var MARGIN = 5;
+    // @todo This could be made much faster!
+    const RADIUS = 6;
 
-    // TODO: These +1s and -1s everywhere indicate an off-by-one error somewhere.
     var centre_x = avatar_x + 1
     var centre_y = avatar_y + 1
 
-    for (var x = centre_x - MARGIN; x <= centre_x + MARGIN; x++) {
-        for (var y = centre_y - MARGIN; y <= centre_y + MARGIN; y++) {
-            if (x > 0 && y > 0 && x < map_width && y < map_height) {
-                if (!visibility[x + y * map_width]) {                
+    for (var x = centre_x - RADIUS; x <= centre_x + RADIUS; x++) {
+        for (var y = centre_y - RADIUS; y <= centre_y + RADIUS; y++) {
+            if (x >= 0 && y >= 0 && x < map.width && y < map.height) {
+                if (!visibility[y][x]) {                
                     if (Math.sqrt(Math.pow(centre_x - x, 2) +
-                                  Math.pow(centre_y - y, 2)) < MARGIN) {
-                        // TODO: Use line of sight calculations.
-                        visibility[x + y * map_width] = 1
+                                  Math.pow(centre_y - y, 2)) < RADIUS) {
+                        // @todo Use line of sight calculations.
+                        // @todo Standard x,y ordering.
+                        visibility[y][x] = true
                         made_visible.push([x, y])
                     }
                 }
@@ -66,11 +64,11 @@ function update_visibility() {
 }
 
 function get_tile(x, y) {
-    return MAP[y][x]
+    return map.tiles[y][x]
 }
 
 function is_tile_visible(x, y) {
-    return visibility[x + y * map_width];
+    return visibility[y][x]
 }
 
 function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, tile_height) {
@@ -119,7 +117,11 @@ function draw_map() {
 
     view_width = Math.floor(width / tile_size);
     view_height = Math.floor(height / tile_size);
-
+    if (view_x == null) {
+        view_x = Math.max(avatar_x - Math.floor(view_width / 2), 0)
+        view_y = Math.max(avatar_y - Math.floor(view_height / 2), 0)
+    }
+    
     left_margin = Math.floor((width - (view_width * (tile_size * tile_scale))) / 2)
     top_margin = Math.floor((height - (view_height * (tile_size * tile_scale))) / 2)
 
@@ -188,15 +190,15 @@ function draw_avatar() {
     var element = document.getElementById('main')
     var ctx = element.getContext('2d');
 
-    if (last_avatar_direction == 1) {
+    if (last_avatar_direction == NORTH) {
         img_x_offset = 9 * tile_size
         img_y_offset = 7 * tile_size
     }
-    else if (last_avatar_direction == 2) {
+    else if (last_avatar_direction == WEST) {
         img_x_offset = 9 * tile_size
         img_y_offset = 5 * tile_size
     }
-    else if (last_avatar_direction == 3) {
+    else if (last_avatar_direction == SOUTH) {
         img_x_offset = 9 * tile_size
         img_y_offset = 4 * tile_size
     }
@@ -228,7 +230,7 @@ function move_avatar(avatar_direction) {
     new_view_x = view_x
     new_view_y = view_y
     
-    if (avatar_direction == 1) {
+    if (avatar_direction == NORTH) {
         if (avatar_y > 0) {
             new_avatar_y--;
             
@@ -238,7 +240,7 @@ function move_avatar(avatar_direction) {
             }
         }
     }
-    else if (avatar_direction == 2) {
+    else if (avatar_direction == WEST) {
         if (avatar_x > 0) {
             new_avatar_x--;
             
@@ -248,11 +250,11 @@ function move_avatar(avatar_direction) {
             }
         }
     }
-    else if (avatar_direction == 3) {
-        if (avatar_y < map_height - 3) {
+    else if (avatar_direction == SOUTH) {
+        if (avatar_y < map.height - 3) {
             new_avatar_y++;
 
-            if (view_y < (map_height - view_height)) {
+            if (view_y < (map.height - view_height)) {
                 if ((view_y + view_height - avatar_y) < avatar_margin) {
                     new_view_y++;
                     move_view = true;
@@ -261,10 +263,10 @@ function move_avatar(avatar_direction) {
         }
     }
     else {
-        if (avatar_x < map_width - 3) {
+        if (avatar_x < map.width - 3) {
             new_avatar_x++;
 
-            if (view_x < (map_width - view_width)) {
+            if (view_x < (map.width - view_width)) {
                 if ((view_x + view_width - avatar_x) < avatar_margin) {
                     new_view_x++;
                     move_view = true;
@@ -300,17 +302,26 @@ function move_avatar(avatar_direction) {
             // Draw newly visible tiles
             draw_tiles(ctx, newly_visible_tiles);
         }
+
+
+        offset_newly_visible_tiles =
+            newly_visible_tiles.map(tile => [tile[0] + map.startX,
+                                             tile[1] + map.startY])
+        
+        var session = { user: { x: avatar_x + map.startX,
+                                y: avatar_y + map.startY,
+                                direction: last_avatar_direction
+                              },
+                        traversal: { seen: offset_newly_visible_tiles}}
+    
+        fetch('/utopia/api/v0/session.json',
+              {
+                  method:'PUT',
+                  body:JSON.stringify(session)
+              }).then();
     }
     
     draw_avatar()
-
-    var newLocation = { user: { x : avatar_x - 40, y : avatar_y - 40}};
-    
-    fetch('/utopia/api/v0/session.json',
-          {
-              method:'PUT',
-              body:JSON.stringify(newLocation)
-          }).then();
 }
 
 function draw() {
@@ -332,18 +343,18 @@ function on_load() {
             Math.abs((avatar_y - view_y) - y)) {
             
             if (x < (avatar_x - view_x)) {
-                move_avatar(2);
+                move_avatar(WEST);
             }
             else {
-                move_avatar(4);
+                move_avatar(EAST);
             }
         }
         else {
             if (y < (avatar_y - view_y)) {
-                move_avatar(1);
+                move_avatar(NORTH);
             }
             else {
-                move_avatar(3);
+                move_avatar(SOUTH);
             }
         }
     });
@@ -374,21 +385,17 @@ const url = '/utopia/api/v0/session.json'
 fetch(url)
     .then(data => data.json())
     .then((json) => {
-        MAP = json.map.tiles
+        map = json.map
         is_traverseable = json.map.isTraverseable;
-        avatar_x = json.user.x + 40;
-        avatar_y = json.user.y + 40;
+        avatar_x = json.user.x - map.startX;
+        avatar_y = json.user.y - map.startY;
+        last_avatar_direction = json.user.direction;
+        visibility = json.traversal.hasSeen;
 
-        // @todo We need to adjust this for screen size.
-        // @todo We should also take into account if the user is at the
-        // right or bottom edge of the map.
-        view_x = Math.max(avatar_x - 7, 0)
-        view_y = Math.max(avatar_y - 7, 0)
-        
         // Find unique tiles.
-        for (var y = 0; y < map_height; y++) {
-            for (var x = 0; x < map_width; x++) {
-                tile_list = MAP[y][x]
+        for (var y = 0; y < map.height; y++) {
+            for (var x = 0; x < map.width; x++) {
+                tile_list = map.tiles[y][x]
                 for (var tileIndex = 0; tileIndex < tile_list.length; tileIndex++) {
                     images.set(tile_list[tileIndex], null);
                 }
@@ -427,15 +434,15 @@ function checkKey(e) {
     e = e || window.event;
 
     if (e.keyCode == '38') {
-        move_avatar(1);
+        move_avatar(NORTH);
     }
     else if (e.keyCode == '40') {
-        move_avatar(3);            
+        move_avatar(SOUTH);            
     }
     else if (e.keyCode == '37') {
-        move_avatar(2);           
+        move_avatar(WEST);           
     }
     else if (e.keyCode == '39') {
-        move_avatar(4);
+        move_avatar(EAST);
     }
 }
