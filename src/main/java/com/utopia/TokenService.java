@@ -42,9 +42,9 @@ public class TokenService extends Service
     }
     
     public String createToken(long userId) {
-        try {
+        try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
+                connection.prepareStatement
                 ("INSERT INTO tokens (created_time, token, user_id) VALUES(?, ?, ?)");
 
             final OffsetDateTime now = OffsetDateTime.now();
@@ -71,9 +71,9 @@ public class TokenService extends Service
     }
     
     public Token findToken(final String tokenString) {
-        try {
+        try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
+                connection.prepareStatement
                 ("SELECT id, created_time, user_id FROM tokens WHERE token=?");
             preparedStatement.setString(1, tokenString);
             

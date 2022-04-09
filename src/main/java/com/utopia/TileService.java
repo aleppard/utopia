@@ -21,12 +21,12 @@ public class TileService extends Service
         Logger.getLogger(TileService.class.getName());
 
     public HashMap<Integer, Boolean> getTraverseability() {
-        try {
+        try (Connection connection = getConnection()) {            
             // @todo Using an array would be better here.
             HashMap<Integer, Boolean> traverseability = new HashMap<>();
             
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
+                connection.prepareStatement
                 ("SELECT id, is_traverseable FROM tiles");
             ResultSet resultSet = preparedStatement.executeQuery();
             
@@ -47,10 +47,10 @@ public class TileService extends Service
     }
     
     public void add(Tile tile) {
-        try {
+        try (Connection connection = getConnection()) {                    
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
-                ("INSERT INTO tiles (is_traverseable, code, description, tile_type) VALUES (?, ?, ?, ?::tile_enum)");
+                connection.prepareStatement
+                ("INSERT INTO tiles (is_traverseable, code, description, tile_type) VALUES (?, ?, ?, ?::tile_type)");
             preparedStatement.setBoolean(1, tile.isTraverseable);
             preparedStatement.setString(2, tile.code);
             preparedStatement.setString(3, tile.description);
@@ -65,9 +65,9 @@ public class TileService extends Service
     }
 
     public byte[] getImage(long id) {
-        try {
+        try (Connection connection = getConnection()) {                    
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
+                connection.prepareStatement
                 ("SELECT image FROM tiles WHERE id=?");
             preparedStatement.setLong(1, id);
             preparedStatement.executeQuery();
@@ -88,8 +88,8 @@ public class TileService extends Service
     }
 
     public void setImage(long id, byte[] image) {
-        try {
-            PreparedStatement preparedStatement = getConnection().prepareStatement("UPDATE tiles SET image=? WHERE id=?");
+        try (Connection connection = getConnection()) {                    
+            PreparedStatement preparedStatement = connection.prepareStatement("UPDATE tiles SET image=? WHERE id=?");
             preparedStatement.setBytes(1, image);
             preparedStatement.setLong(2, id);
             preparedStatement.executeUpdate();

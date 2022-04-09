@@ -31,14 +31,15 @@ public class UserService extends Service
     
     public User createNewUser() {
         final OffsetDateTime now = OffsetDateTime.now();
-        final int x = 7;
-        final int y = 7;
+        final int x = 5;
+        final int y = 5;
+        final String direction = "east";
         final String name = nameGenerator.generateName();
 
-        try {
+        try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
-                ("INSERT INTO users (created_time, last_seen_time, last_x, last_y, avatar_name) VALUES (?, ?, ?, ?, ?)",
+                connection.prepareStatement
+                ("INSERT INTO users (created_time, last_seen_time, last_x, last_y, last_direction, avatar_name) VALUES (?, ?, ?, ?, ?::direction_type, ?)",
                  Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setTimestamp
                 (1,
@@ -50,7 +51,8 @@ public class UserService extends Service
                                    .toLocalDateTime()));                 
             preparedStatement.setInt(3, x);
             preparedStatement.setInt(4, y);
-            preparedStatement.setString(5, name);
+            preparedStatement.setString(5, direction);
+            preparedStatement.setString(6, name);
             preparedStatement.executeUpdate();
 
             ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
@@ -74,19 +76,21 @@ public class UserService extends Service
     }
 
     public User getUser(long userId) {
-        try {
+        try (Connection connection = getConnection()) {        
             User user = new User();
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement
-                ("SELECT created_time, last_seen_time, last_x, last_y, avatar_name FROM users WHERE id=?");
+                connection.prepareStatement
+                ("SELECT created_time, last_seen_time, last_x, last_y, last_direction, avatar_name FROM users WHERE id=?");
             preparedStatement.setLong(1, userId);
             preparedStatement.executeQuery();
             
             ResultSet resultSet = preparedStatement.executeQuery();
             
             if (resultSet.next()) {
+                user.id = userId;
                 user.lastX = resultSet.getInt("last_x");
                 user.lastY = resultSet.getInt("last_y");
+                user.lastDirection = resultSet.getString("last_direction");
                 user.name = resultSet.getString("avatar_name");
                 return user;
             }
@@ -99,13 +103,14 @@ public class UserService extends Service
         return null;
     }
 
-    public void updateUserLastLocation(long userId, int x, int y) {
-        try {
+    public void updateUserLastLocation(long userId, int x, int y, final String direction) {
+        try (Connection connection = getConnection()) {        
             // @todo Also update user's last seen time.
-            PreparedStatement preparedStatement = getConnection().prepareStatement("UPDATE users SET last_x=?, last_y=? WHERE id=?");
+            PreparedStatement preparedStatement = connection.prepareStatement("UPDATE users SET last_x=?, last_y=?, last_direction=?::direction_type WHERE id=?");
             preparedStatement.setInt(1, x);
-            preparedStatement.setInt(2, y);            
-            preparedStatement.setLong(3, userId);
+            preparedStatement.setInt(2, y);
+            preparedStatement.setString(3, direction);
+            preparedStatement.setLong(4, userId);
             preparedStatement.executeUpdate();
         }
         catch (SQLException exception) {

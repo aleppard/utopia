@@ -1,5 +1,9 @@
 -- \i create.sql
 
+-- @todo Add north-east, north-west etc for diagonal movements.
+CREATE TYPE direction_type AS ENUM ('north', 'east', 'south', 'west');
+
+-- @todo Make table names singular?
 -- @todo Change last_x, last_y to simply x and y.
 CREATE TABLE IF NOT EXISTS users(
        id SERIAL PRIMARY KEY,
@@ -7,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users(
        last_seen_time TIMESTAMP NOT NULL,
        last_x INTEGER NOT NULL,
        last_y INTEGER NOT NULL,
+       last_direction direction_type NOT NULL,
        avatar_name VARCHAR(64) NOT NULL,
        email VARCHAR(64),
        CHECK (last_seen_time >= created_time));
@@ -34,15 +39,21 @@ CREATE TABLE IF NOT EXISTS inventory(
        user_id INTEGER REFERENCES users NOT NULL,
        item_count INTEGER NOT NULL);
 
-CREATE TYPE tile_enum AS ENUM ('land', 'water');
+CREATE TYPE tile_type AS ENUM ('land', 'water');
 
--- @todo Move tile images into separate table.
+-- @todo Move images into separate table?
 CREATE TABLE IF NOT EXISTS tiles(
        id SERIAL PRIMARY KEY,
-       tile_type tile_enum NOT NULL,
+       tile_type tile_type NOT NULL,
        is_traverseable BOOLEAN NOT NULL,
        code VARCHAR(4) NOT NULL UNIQUE,
        image BYTEA,
+       description VARCHAR(128));
+
+CREATE TABLE IF NOT EXISTS sprites(
+       id SERIAL PRIMARY KEY,
+       facing_direction direction_type NOT NULL,
+       imaage BYTEA,
        description VARCHAR(128));
 
 CREATE TABLE IF NOT EXISTS game_map(
@@ -55,7 +66,7 @@ CREATE TABLE IF NOT EXISTS game_map(
        overlay_tile3_id INTEGER REFERENCES tiles,
        is_traverseable BOOLEAN NOT NULL);
 
-CREATE TABLE IF NOT EXISTS user_traversals(
+CREATE TABLE IF NOT EXISTS traversals(
        x INTEGER NOT NULL,
        y INTEGER NOT NULL,
        user_id INTEGER NOT NULL REFERENCES users,       

@@ -33,9 +33,9 @@ public class MapService extends Service
     }
 
     private void findMinMax() {
-        try {
+        try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement("SELECT MIN(x), MAX(x), MIN(y), MAX(y) FROM game_map");
+                connection.prepareStatement("SELECT MIN(x), MAX(x), MIN(y), MAX(y) FROM game_map");
             ResultSet resultSet = preparedStatement.executeQuery();
             
             resultSet.next();
@@ -65,13 +65,13 @@ public class MapService extends Service
     }
     
     public Map getMap() {
-        try {
+        try (Connection connection = getConnection()) {        
             Map map = new Map(minX,
                               minY,
                               getWidth(),
                               getHeight());
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement("SELECT * FROM game_map ORDER BY y, x");
+                connection.prepareStatement("SELECT * FROM game_map ORDER BY y, x");
             ResultSet resultSet = preparedStatement.executeQuery();
 
             while (resultSet.next()) {
@@ -95,7 +95,9 @@ public class MapService extends Service
                     int overlayTile3Id = resultSet.getInt("overlay_tile3_id");
                     if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
                 }
-                
+
+                // @todo Check the x, y is within bounds. If not call findMinMax()
+                // again.
                 map.tiles[y - minY][x - minX] = tiles;
                 map.isTraverseable[y - minY][x - minX] =
                     resultSet.getBoolean("is_traverseable");
@@ -113,7 +115,7 @@ public class MapService extends Service
     }
 
     public Map getMap(int startX, int startY, int width, int height) {
-        try {
+        try (Connection connection = getConnection()) {
             startX = Math.max(startX, minY);
             startY = Math.max(startY, minY);
             width = Math.min(width, maxX - startX);
@@ -124,7 +126,7 @@ public class MapService extends Service
                               width,
                               height);
             PreparedStatement preparedStatement =
-                getConnection().prepareStatement("SELECT * FROM game_map WHERE x >= ? AND y >= ? AND x < ? AND y < ?  ORDER BY y, x ");
+                connection.prepareStatement("SELECT * FROM game_map WHERE x >= ? AND y >= ? AND x < ? AND y < ?  ORDER BY y, x ");
             preparedStatement.setInt(1, startX);
             preparedStatement.setInt(2, startY);
             preparedStatement.setInt(3, startX + width);
@@ -154,7 +156,9 @@ public class MapService extends Service
                     int overlayTile3Id = resultSet.getInt("overlay_tile3_id");
                     if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
                 }
-                
+
+                // MYTODO this doesn't look right for getting a bit of the map
+                // should be startY etc.
                 map.tiles[y - minY][x - minX] = tiles;
                 map.isTraverseable[y - minY][x - minX] =
                     resultSet.getBoolean("is_traverseable");
@@ -184,9 +188,9 @@ public class MapService extends Service
     public void setMap(Map map) {
         HashMap<Integer, Boolean> traverseability =
             tileService.getTraverseability();
-        
-        try {
-            PreparedStatement preparedStatement = getConnection().prepareStatement("INSERT INTO game_map (x, y, base_tile_id, overlay_tile1_id, overlay_tile2_id, overlay_tile3_id, is_traverseable) VALUES (?, ?, ?, ?, ?, ?, ?)");           
+
+        try (Connection connection = getConnection()) {        
+            PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO game_map (x, y, base_tile_id, overlay_tile1_id, overlay_tile2_id, overlay_tile3_id, is_traverseable) VALUES (?, ?, ?, ?, ?, ?, ?)");           
             for (int i = 0; i < map.height; i++) {
                 int y = map.startY + i;
                 

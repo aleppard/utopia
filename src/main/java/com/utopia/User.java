@@ -12,6 +12,7 @@ public class User
     public OffsetDateTime lastSeenTime;
     public int lastX;
     public int lastY;
+    public String lastDirection;
     public String name;
     public String email;
 }

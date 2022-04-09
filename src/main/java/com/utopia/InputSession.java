@@ -4,20 +4,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @todo Rename to OutputSession.
  */
-public class Session
+public class InputSession
 {
     public static class User {
-        public String name;
         public int x;
         public int y;
         public String direction;
     }
 
+    // @todo We should validate what the user gives us.
+    public static class Traversal {
+        public Integer[][] seen;
+    }
+    
     public User user;
-    public Map map;
-
-    // @todo Perhaps this should be under User?
     public Traversal traversal;
 }

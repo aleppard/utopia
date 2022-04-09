@@ -22,9 +22,10 @@ public class SessionServlet extends HttpServlet
     private static final String COOKIE_NAME = "utopia-token";
     private static final String COOKIE_PATH = "/utopia";
 
+    private MapService mapService = new MapService();    
     private TokenService tokenService = new TokenService();
+    private TraversalService traversalService = new TraversalService();
     private UserService userService = new UserService();
-    private MapService mapService = new MapService();
     
     private Cookie findCookie(HttpServletRequest request) {
         final String contextPath = request.getContextPath();
@@ -63,15 +64,27 @@ public class SessionServlet extends HttpServlet
         if (cookie != null) {
             final String tokenString = cookie.getValue();
             final Token token = tokenService.findToken(tokenString);
-            user = userService.getUser(token.userId);
+            if (token != null) {
+                user = userService.getUser(token.userId);
+            }
             // @todo Log if not found.
             // @todo Update last seen time.
         }
 
+        Map map = mapService.getMap();
+        
         if (user == null) {
             user = userService.createNewUser();
             final String tokenString = tokenService.createToken(user.id);
             response.addCookie(createCookie(tokenString));
+            traversalService.updateUserSeen
+                (user.id,
+                 TraversalService.calculateSeen(map.startX,
+                                                map.startY,
+                                                map.width,
+                                                map.height,
+                                                user.lastX,
+                                                user.lastY));
         }
         
         Gson gson = new Gson();
@@ -80,8 +93,14 @@ public class SessionServlet extends HttpServlet
         sessionUser.name = user.name;
         sessionUser.x = user.lastX;
         sessionUser.y = user.lastY;
+        sessionUser.direction = user.lastDirection;
         session.user = sessionUser;
-        session.map = mapService.getMap();
+        session.map = map;
+        session.traversal = traversalService.getUserSeen(user.id,
+                                                         map.startX,
+                                                         map.startY,
+                                                         map.width,
+                                                         map.height);
         
         response.getWriter().print(gson.toJson(session));
     }
@@ -105,17 +124,24 @@ public class SessionServlet extends HttpServlet
             final Token token = tokenService.findToken(tokenString);
 
             Gson gson = new Gson();
-            Session session = gson.fromJson(request.getReader(),
-                                            Session.class);
+            InputSession session = gson.fromJson(request.getReader(),
+                                                 InputSession.class);
 
             // @todo Don't write every location update to the database.
             // Cache the request for a period of time and then update
             // later to minimise I/O.
             // @todo Validate that the user can move to that location.
             // @todo Rate limit movement.
+            // @todo Validate direction.
             userService.updateUserLastLocation(token.userId,
                                                session.user.x,
-                                               session.user.y);
+                                               session.user.y,
+                                               session.user.direction);
+            // @todo Check that these coordinates are valid, i.e. they are
+            // within the map and within the user's line of site. Another
+            // way is calculating these server-side.
+            traversalService.updateUserSeen(token.userId,
+                                            session.traversal.seen);
         }
     }
 }
