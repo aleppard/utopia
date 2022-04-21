@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Servlet to retrieve map.
@@ -54,9 +54,9 @@ public class MapServlet extends HttpServlet
         else {
             map = service.getMap();
         }
-        
-        Gson gson = new Gson();
-        response.getWriter().print(gson.toJson(map));
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(response.getWriter(), map);
     }
 
     /**
@@ -67,8 +67,8 @@ public class MapServlet extends HttpServlet
         throws IOException {
 
         // @todo Secure this end-point.
-        Gson gson = new Gson();
-        Map map = gson.fromJson(request.getReader(), Map.class);
+        ObjectMapper mapper = new ObjectMapper();        
+        Map map = mapper.readValue(request.getReader(), Map.class);
         service.setMap(map);
     }
 }

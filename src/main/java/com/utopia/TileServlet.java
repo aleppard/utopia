@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Servlet to add a new tile.
@@ -27,8 +27,8 @@ public class TileServlet extends HttpServlet
         // @todo Secure this end-point.
         response.setContentType("application/json; charset=utf-8");
 
-        Gson gson = new Gson();
-        Tile tile = gson.fromJson(request.getReader(), Tile.class);
+        ObjectMapper mapper = new ObjectMapper();        
+        Tile tile = mapper.readValue(request.getReader(), Tile.class);
         service.add(tile);
     }
 }

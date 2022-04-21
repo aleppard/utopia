@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Servlet to create or retrieve user session.
@@ -51,7 +51,8 @@ public class SessionServlet extends HttpServlet
     /**
      * GET /session.json
      *
-     * Find the user's session via cookie. Create a new session and avatar if not found.
+     * Find the user's session via cookie. Create a new session and avatar if 
+     * not found.
      */
     @Override public void doGet(HttpServletRequest request,
                                 HttpServletResponse response)
@@ -87,7 +88,6 @@ public class SessionServlet extends HttpServlet
                                                 user.lastY));
         }
         
-        Gson gson = new Gson();
         Session session = new Session();
         Session.User sessionUser = new Session.User();
         sessionUser.name = user.name;
@@ -101,8 +101,9 @@ public class SessionServlet extends HttpServlet
                                                          map.startY,
                                                          map.width,
                                                          map.height);
-        
-        response.getWriter().print(gson.toJson(session));
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.writeValue(response.getWriter(), session);
     }
 
     /**
@@ -123,10 +124,9 @@ public class SessionServlet extends HttpServlet
             final String tokenString = cookie.getValue();
             final Token token = tokenService.findToken(tokenString);
 
-            Gson gson = new Gson();
-            InputSession session = gson.fromJson(request.getReader(),
-                                                 InputSession.class);
-
+            ObjectMapper mapper = new ObjectMapper();
+            InputSession session = mapper.readValue(request.getReader(),
+                                                    InputSession.class);
             // @todo Don't write every location update to the database.
             // Cache the request for a period of time and then update
             // later to minimise I/O.
