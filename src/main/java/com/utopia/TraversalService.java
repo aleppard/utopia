@@ -39,14 +39,12 @@ public class TraversalService extends Service
             ResultSet resultSet = preparedStatement.executeQuery();
             
             while (resultSet.next()) {
-                LOGGER.info("found");
                 final boolean hasSeen = resultSet.getBoolean("has_seen");
                 
                 if (hasSeen) {
-                    LOGGER.info("has seen");                    
                     int x = resultSet.getInt("x");
                     int y = resultSet.getInt("y");
-                    traversal.hasSeen[y - startY][x - startX] = true;
+                    traversal.hasSeen[y - startY][x - startX] = 1;
                 }
             }
         }
