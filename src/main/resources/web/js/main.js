@@ -1,7 +1,7 @@
 // Prototype code (i.e. it's not meant to be good yet).
 
 //The path to the image that we want to add.
-var imgPath3 = '/utopia/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
+var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
 
 //Create a new Image object.
 var imgObj3 = new Image();
@@ -11,16 +11,17 @@ imgObj3.src = imgPath3;
 
 // @todo Get from back-end.
 var tile_size = 32;
-var tile_scale = 1; // TODO: Remove
 
 // Offset of view from start of map.
-var view_x = null;
-var view_y = null;
+var view_pixel_x = null;
+var view_pixel_y = null;
 
 var view_width;
 var view_height;
+var screen_width;
+var screen_height;
 
-// @todo use "block_x" vs. "pixel_x".
+// @todo use "tile_x" vs. "pixel_x".
 var avatar_pixel_x;
 var avatar_pixel_y;
 
@@ -44,7 +45,7 @@ var images = new Map();
 var visibility;
 
 // Frame rate when moving avatar
-const MOVE_FRAME_COUNT_PER_SECOND = 48;
+const MOVE_FRAME_COUNT_PER_SECOND = 60;
 
 // Number of pixels to move avatar per frame.
 const MOVE_PIXELS_PER_FRAME = 4;
@@ -52,11 +53,10 @@ const MOVE_PIXELS_PER_FRAME = 4;
 var move_key_down = null;
 
 function isTraverseable(pixel_x, pixel_y) {
-    // @todo Figure out how we can remove these +1s.
-    x_floor = Math.floor(pixel_x / tile_size + 1);
-    x_ceil = Math.ceil(pixel_x / tile_size + 1);
-    y_floor = Math.floor(pixel_y / tile_size + 1);
-    y_ceil = Math.ceil(pixel_y / tile_size + 1);     
+    x_floor = Math.floor(pixel_x / tile_size);
+    x_ceil = Math.ceil(pixel_x / tile_size);
+    y_floor = Math.floor(pixel_y / tile_size);
+    y_ceil = Math.ceil(pixel_y / tile_size);     
 
     return (is_traverseable[y_floor][x_floor] &&
             is_traverseable[y_floor][x_ceil] &&
@@ -67,10 +67,10 @@ function isTraverseable(pixel_x, pixel_y) {
 function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
     // @todo This is excessive. At most we need to redraw two tiles and
     // not even the entire two tiles.
-    x_floor = Math.floor(old_avatar_pixel_x / tile_size + 1);
-    x_ceil = Math.ceil(old_avatar_pixel_x / tile_size + 1);
-    y_floor = Math.floor(old_avatar_pixel_y / tile_size + 1);
-    y_ceil = Math.ceil(old_avatar_pixel_y / tile_size + 1);     
+    x_floor = Math.floor(old_avatar_pixel_x / tile_size);
+    x_ceil = Math.ceil(old_avatar_pixel_x / tile_size);
+    y_floor = Math.floor(old_avatar_pixel_y / tile_size);
+    y_ceil = Math.ceil(old_avatar_pixel_y / tile_size);     
 
     const coordinates = [[x_floor, y_floor],
                          [x_floor, y_ceil],
@@ -79,8 +79,8 @@ function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
     coordinates.forEach(coordinate => {
         tile = get_tile(coordinate[0], coordinate[1])
         draw_tile(ctx, tile,
-                  left_margin + (coordinate[0] - 1 - view_x) * tile_size,
-                  top_margin + (coordinate[1] - 1 - view_y) * tile_size,
+                  coordinate[0] * tile_size - view_pixel_x,
+                  coordinate[1] * tile_size - view_pixel_y,
                   0, 0,
                   tile_size, tile_size);
     });
@@ -91,8 +91,8 @@ function update_visibility() {
     // @todo This could be made much faster!
     const RADIUS = 6;
 
-    var centre_x = Math.round(avatar_pixel_x / tile_size) + 1
-    var centre_y = Math.round(avatar_pixel_y / tile_size) + 1
+    var centre_x = Math.round(avatar_pixel_x / tile_size)
+    var centre_y = Math.round(avatar_pixel_y / tile_size)
 
     for (var x = centre_x - RADIUS; x <= centre_x + RADIUS; x++) {
         for (var y = centre_y - RADIUS; y <= centre_y + RADIUS; y++) {
@@ -138,21 +138,18 @@ function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, ti
 function draw_tiles(ctx, tiles) {
     for (var i = 0; i < tiles.length; i++) {
         tile = tiles[i]
-        x = tile[0] - 1
-        y = tile[1] - 1
-        tile = get_tile(x + 1, y + 1);
+        x = tile[0]
+        y = tile[1]
+        tile = get_tile(x, y);
 
         // TODO What about partial tiles?
         draw_tile(ctx, tile,
-                  left_margin + tile_size * (x - view_x),
-                  top_margin + tile_size * (y - view_y),
+                  x * tile_size - view_pixel_x,
+                  y * tile_size - view_pixel_y,
                   0, 0,
                   tile_size, tile_size);
     }
 }
-
-var left_margin;
-var top_margin;
 
 function draw_map() {
     var element = document.getElementById('main')
@@ -165,38 +162,34 @@ function draw_map() {
     var height = positionInfo.height;
     var width = positionInfo.width;
 
-    view_width = Math.floor(width / tile_size);
-    view_height = Math.floor(height / tile_size);
-    if (view_x == null) {
-        view_x = Math.max(Math.floor(avatar_pixel_x / tile_size - view_width / 2), 0)
-        view_y = Math.max(Math.floor(avatar_pixel_y / tile_size - view_height / 2), 0)
+    if (view_pixel_x == null) {
+        screen_width = width;
+        screen_height = height
+
+        // @todo Remove these two
+        view_width = Math.floor(width / tile_size);
+        view_height = Math.floor(height / tile_size);
+
+        // @todo Don't position these such that the screen extends past the
+        // map.
+        view_pixel_x = Math.max(Math.floor(avatar_pixel_x / tile_size - view_width / 2) * tile_size, 0)
+        view_pixel_y = Math.max(Math.floor(avatar_pixel_y / tile_size - view_height / 2) * tile_size, 0)
     }
+
+    view_x = Math.floor(view_pixel_x / tile_size)
+    view_y = Math.floor(view_pixel_y / tile_size)
     
-    left_margin = Math.floor((width - (view_width * (tile_size * tile_scale))) / 2)
-    top_margin = Math.floor((height - (view_height * (tile_size * tile_scale))) / 2)
-
-    var right_margin = width - view_width * tile_size * tile_scale - left_margin;
-    var bottom_margin = height - view_height * tile_size * tile_scale - top_margin;
-    
-    if (left_margin  > 0) {
-        view_width += 2;
-    }
-
-    if (top_margin > 0) {
-        view_height += 2;
-    }
-
     tile_y_offset = 0
     
-    for (var i = 0; i < view_height; i++) {
+    for (var i = 0; tile_y_offset < height; i++) {
 
         if (i == 0) {
-            source_tile_y_offset = (tile_size - top_margin / tile_scale)
-            tile_height = top_margin / tile_scale
+            source_tile_y_offset = view_pixel_y % tile_size
+            tile_height = tile_size - source_tile_y_offset
         }
-        else if (i == view_height - 1) {
+        else if (tile_y_offset + tile_size >= height) {
             source_tile_y_offset = 0            
-            tile_height = bottom_margin / tile_scale
+            tile_height = height - tile_y_offset
         }
         else {
             source_tile_y_offset = 0
@@ -205,15 +198,15 @@ function draw_map() {
         
         tile_x_offset = 0
 
-        for (var j = 0; j < view_width; j++) {
+        for (var j = 0; tile_x_offset < width; j++) {
 
             if (j == 0) {
-                source_tile_x_offset = (tile_size - left_margin / tile_scale)
-                tile_width = left_margin / tile_scale;
+                source_tile_x_offset = view_pixel_x % tile_size
+                tile_width = tile_size - source_tile_x_offset
             }
-            else if (j == view_width - 1) {
+            else if (tile_x_offset + tile_size >= width) {
                 source_tile_x_offset = 0                
-                tile_width = right_margin / tile_scale
+                tile_width = width - tile_x_offset
             }
             else {
                 source_tile_x_offset = 0
@@ -221,17 +214,16 @@ function draw_map() {
             }
 
             tile = get_tile(view_x + j, view_y + i)
-
             if (is_tile_visible(view_x + j, view_y + i)) {
                 draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
                           source_tile_x_offset, source_tile_y_offset,
                           tile_width, tile_height)
             }
 
-            tile_x_offset += tile_width * tile_scale
+            tile_x_offset += tile_width
         }
 
-        tile_y_offset += tile_height * tile_scale
+        tile_y_offset += tile_height
     }
 }
 
@@ -262,8 +254,8 @@ function draw_avatar() {
                   img_y_offset,
                   tile_size,
                   tile_size,
-                  left_margin + (avatar_pixel_x - view_x * tile_size),
-                  top_margin + (avatar_pixel_y - view_y * tile_size),
+                  avatar_pixel_x - view_pixel_x,
+                  avatar_pixel_y - view_pixel_y,
                   tile_size, tile_size);    
 }
 
@@ -277,15 +269,15 @@ function move_avatar(avatar_direction) {
     new_avatar_pixel_x = avatar_pixel_x
     new_avatar_pixel_y = avatar_pixel_y
 
-    new_view_x = view_x
-    new_view_y = view_y
+    new_view_pixel_x = view_pixel_x
+    new_view_pixel_y = view_pixel_y
     
     if (avatar_direction == NORTH) {
         if (avatar_pixel_y > 0) {
             new_avatar_pixel_y = new_avatar_pixel_y - MOVE_PIXELS_PER_FRAME
             
-            if (view_y > 0 && ((Math.round(avatar_pixel_y / tile_size) - view_y) < avatar_margin)) {
-                new_view_y--;
+            if (view_pixel_y > 0 && Math.round((avatar_pixel_y - view_pixel_y) / tile_size) < avatar_margin) {
+                new_view_pixel_y -= MOVE_PIXELS_PER_FRAME;
                 move_view = true;
             }
         }
@@ -294,31 +286,31 @@ function move_avatar(avatar_direction) {
         if (avatar_pixel_x > 0) {
             new_avatar_pixel_x = new_avatar_pixel_x - MOVE_PIXELS_PER_FRAME
             
-            if (view_x > 0 && ((Math.round(avatar_pixel_x / tile_size) - view_x) < avatar_margin)) {
-                new_view_x--;
+            if (view_pixel_x > 0 && Math.round((avatar_pixel_x - view_pixel_x) / tile_size) < avatar_margin) {
+                new_view_pixel_x -= MOVE_PIXELS_PER_FRAME;
                 move_view = true;
             }
         }
     }
     else if (avatar_direction == SOUTH) {
-        if (avatar_pixel_y < (map.height - 3) * tile_size) {
+        if (avatar_pixel_y < map.height * tile_size) {
             new_avatar_pixel_y = new_avatar_pixel_y + MOVE_PIXELS_PER_FRAME
 
-            if (view_y < (map.height - view_height)) {
-                if ((view_y + view_height - Math.round(avatar_pixel_y / tile_size)) < avatar_margin) {
-                    new_view_y++;
+            if (view_pixel_y < (map.height * tile_size - screen_height)) {
+                if ((view_height - Math.round((avatar_pixel_y - view_pixel_y) / tile_size)) < avatar_margin) {
+                    new_view_pixel_y += MOVE_PIXELS_PER_FRAME;
                     move_view = true;
                 }
             }
         }
     }
     else {
-        if (avatar_pixel_x < (map.width - 3) * tile_size) {
+        if (avatar_pixel_x < map.width * tile_size) {
             new_avatar_pixel_x = new_avatar_pixel_x + MOVE_PIXELS_PER_FRAME
 
-            if (view_x < (map.width - view_width)) {
-                if ((view_x + view_width - Math.round(avatar_pixel_x / tile_size)) < avatar_margin) {
-                    new_view_x++;
+            if (view_pixel_x < (map.width * tile_size - screen_width)) {
+                if ((view_width - Math.round((avatar_pixel_x - view_pixel_x) / tile_size)) < avatar_margin) {
+                    new_view_pixel_x += MOVE_PIXELS_PER_FRAME;
                     move_view = true;
                 }
             }
@@ -332,8 +324,8 @@ function move_avatar(avatar_direction) {
         avatar_pixel_x = new_avatar_pixel_x
         avatar_pixel_y = new_avatar_pixel_y
         
-        view_x = new_view_x
-        view_y = new_view_y
+        view_pixel_x = new_view_pixel_x
+        view_pixel_y = new_view_pixel_y
 
         newly_visible_tiles = update_visibility()
         
@@ -359,7 +351,7 @@ function move_avatar(avatar_direction) {
                               },
                         traversal: { seen: offset_newly_visible_tiles}}
     
-        fetch('/utopia/api/v0/session.json',
+        fetch('/api/v0/session.json',
               {
                   method:'PUT',
                   body:JSON.stringify(session)
@@ -380,14 +372,13 @@ function on_load() {
     canvas.addEventListener("touchstart", function (e) {
         var touch = e.touches[0];
 
-        // TODO: Take into account margin
         x = touch.clientX / tile_size
         y = touch.clientY / tile_size
         
-        if (Math.abs((Math.round(avatar_pixel_x / tile_size) - view_x) - x) >
-            Math.abs((Math.round(avatar_pixel_y / tile_size) - view_y) - y)) {
+        if (Math.abs(Math.round((avatar_pixel_x - view_pixel_x) / tile_size) - x) >
+            Math.abs(Math.round((avatar_pixel_y - view_pixel_y) / tile_size) - y)) {
             
-            if (x < (Math.round(avatar_pixel_x / tile_size) - view_x)) {
+            if (x < Math.round(avatar_pixel_x - view_pixel_x / tile_size)) {
                 move_avatar(WEST);
             }
             else {
@@ -395,7 +386,7 @@ function on_load() {
             }
         }
         else {
-            if (y < (Math.round(avatar_pixel_y / tile_size) - view_y)) {
+            if (y < Math.round(avatar_pixel_y - view_pixel_y / tile_size)) {
                 move_avatar(NORTH);
             }
             else {
@@ -411,7 +402,6 @@ function on_load() {
 var resize_timeout;
 
 function resize_map() {
-    // TODO: Why is this sometimes black?
     clearTimeout(resize_timeout);
     resize_timeout = setTimeout(draw, 100);    
 }
@@ -426,7 +416,7 @@ function loadImage(url) {
     });
 }
 
-const url = '/utopia/api/v0/session.json'
+const url = '/api/v0/session.json'
 fetch(url)
     .then(data => data.json())
     .then((json) => {
@@ -453,7 +443,7 @@ fetch(url)
         
         tileIds.forEach(tileId => {
             if (tileId != 0) {
-                promises.push(loadImage('/utopia/api/v0/tile.png?id=' + tileId));
+                promises.push(loadImage('/api/v0/tile.png?id=' + tileId));
             }
         });
         
