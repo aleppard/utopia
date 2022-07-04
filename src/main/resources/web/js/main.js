@@ -1,3 +1,4 @@
+////////////////////////////////////////////////////////////////////////////////
 // Prototype code (i.e. it's not meant to be good yet).
 
 //The path to the image that we want to add.
@@ -48,7 +49,7 @@ var visibility;
 const MOVE_FRAME_COUNT_PER_SECOND = 60;
 
 // Number of pixels to move avatar per frame.
-const MOVE_PIXELS_PER_FRAME = 4;
+const MOVE_PIXEL_COUNT = 4;
 
 var move_key_down = null;
 
@@ -170,17 +171,32 @@ function draw_map() {
         view_width = Math.floor(width / tile_size);
         view_height = Math.floor(height / tile_size);
 
-        // @todo Don't position these such that the screen extends past the
+        // Position the initial view such that the avatar is in the middle
+        // of the screen.
+        view_pixel_x = Math.floor(avatar_pixel_x / tile_size - view_width / 2) * tile_size
+        view_pixel_y = Math.floor(avatar_pixel_y / tile_size - view_height / 2) * tile_size
+
+        // Make sure that the view is not positioned before the start of the
         // map.
-        view_pixel_x = Math.max(Math.floor(avatar_pixel_x / tile_size - view_width / 2) * tile_size, 0)
-        view_pixel_y = Math.max(Math.floor(avatar_pixel_y / tile_size - view_height / 2) * tile_size, 0)
+        view_pixel_x = Math.max(view_pixel_x, 0)
+        view_pixel_y = Math.max(view_pixel_y, 0)
+
+        // Make sure that the view is not positioned such that the view extends
+        // past the edge of the map.
+        view_pixel_x = Math.min(view_pixel_x, map.width * tile_size - screen_width)        
+        view_pixel_y = Math.min(view_pixel_y, map.height * tile_size - screen_height)
+
+        // Make sure that the view is positioned modulo the pixel movement
+        // amount so that the view is properly aligned to avatar movement.
+        view_pixel_x = view_pixel_x - view_pixel_x % MOVE_PIXEL_COUNT
+        view_pixel_y = view_pixel_y - view_pixel_y % MOVE_PIXEL_COUNT        
     }
 
     view_x = Math.floor(view_pixel_x / tile_size)
     view_y = Math.floor(view_pixel_y / tile_size)
     
     tile_y_offset = 0
-    
+
     for (var i = 0; tile_y_offset < height; i++) {
 
         if (i == 0) {
@@ -228,7 +244,6 @@ function draw_map() {
 }
 
 function draw_avatar() {
-    // TODO: Avatar should go one more to the left and up?
     var element = document.getElementById('main')
     var ctx = element.getContext('2d');
 
@@ -274,31 +289,31 @@ function move_avatar(avatar_direction) {
     
     if (avatar_direction == NORTH) {
         if (avatar_pixel_y > 0) {
-            new_avatar_pixel_y = new_avatar_pixel_y - MOVE_PIXELS_PER_FRAME
+            new_avatar_pixel_y = new_avatar_pixel_y - MOVE_PIXEL_COUNT
             
             if (view_pixel_y > 0 && Math.round((avatar_pixel_y - view_pixel_y) / tile_size) < avatar_margin) {
-                new_view_pixel_y -= MOVE_PIXELS_PER_FRAME;
+                new_view_pixel_y -= MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
     else if (avatar_direction == WEST) {
         if (avatar_pixel_x > 0) {
-            new_avatar_pixel_x = new_avatar_pixel_x - MOVE_PIXELS_PER_FRAME
+            new_avatar_pixel_x = new_avatar_pixel_x - MOVE_PIXEL_COUNT
             
             if (view_pixel_x > 0 && Math.round((avatar_pixel_x - view_pixel_x) / tile_size) < avatar_margin) {
-                new_view_pixel_x -= MOVE_PIXELS_PER_FRAME;
+                new_view_pixel_x -= MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
     else if (avatar_direction == SOUTH) {
         if (avatar_pixel_y < map.height * tile_size) {
-            new_avatar_pixel_y = new_avatar_pixel_y + MOVE_PIXELS_PER_FRAME
+            new_avatar_pixel_y = new_avatar_pixel_y + MOVE_PIXEL_COUNT
 
             if (view_pixel_y < (map.height * tile_size - screen_height)) {
                 if ((view_height - Math.round((avatar_pixel_y - view_pixel_y) / tile_size)) < avatar_margin) {
-                    new_view_pixel_y += MOVE_PIXELS_PER_FRAME;
+                    new_view_pixel_y += MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
@@ -306,11 +321,11 @@ function move_avatar(avatar_direction) {
     }
     else {
         if (avatar_pixel_x < map.width * tile_size) {
-            new_avatar_pixel_x = new_avatar_pixel_x + MOVE_PIXELS_PER_FRAME
+            new_avatar_pixel_x = new_avatar_pixel_x + MOVE_PIXEL_COUNT
 
             if (view_pixel_x < (map.width * tile_size - screen_width)) {
                 if ((view_width - Math.round((avatar_pixel_x - view_pixel_x) / tile_size)) < avatar_margin) {
-                    new_view_pixel_x += MOVE_PIXELS_PER_FRAME;
+                    new_view_pixel_x += MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
