@@ -31,8 +31,9 @@ public class UserService extends Service
     
     public User createNewUser() {
         final OffsetDateTime now = OffsetDateTime.now();
-        final int x = 5;
-        final int y = 5;
+        // @todo Should check this is traverseable.
+        final int x = 6;
+        final int y = 6;
         final String direction = "east";
         final String name = nameGenerator.generateName();
 

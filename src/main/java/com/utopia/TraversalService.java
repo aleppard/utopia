@@ -66,8 +66,8 @@ public class TraversalService extends Service
         // @todo This could be made much faster!
         final int RADIUS = 6;
 
-        final int centreX = avatarX + 1;
-        final int centreY = avatarY + 1;
+        final int centreX = avatarX;
+        final int centreY = avatarY;
             
         for (int x = centreX - RADIUS; x <= centreX + RADIUS; x++) {
             for (int y = centreY - RADIUS; y <= centreY + RADIUS; y++) {
