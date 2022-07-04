@@ -20,7 +20,7 @@ public class SessionServlet extends HttpServlet
        Logger.getLogger(SessionServlet.class.getName());
 
     private static final String COOKIE_NAME = "utopia-token";
-    private static final String COOKIE_PATH = "/utopia";
+    private static final String COOKIE_PATH = "/";
 
     private MapService mapService = new MapService();    
     private TokenService tokenService = new TokenService();
