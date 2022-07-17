@@ -1,0 +1,38 @@
+<!-- Edit and copy to ~/.m2/settings.xml -->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <profiles>
+        <profile>
+            <id>test</id>
+            <properties>
+              <tomcat.username>utopia</tomcat.username>
+              <tomcat.password>PASSWORD</tomcat.password>
+              <tomcat.host>localhost</tomcat.host>
+              <tomcat.port>8080</tomcat.port>
+              <database.user>utopia</database.user>
+              <database.password>PASSWORD</database.password>
+              <database.name>utopia</database.name>
+              <database.host>127.0.0.1</database.host>              
+              <database.port>5432</database.port>
+            </properties>
+        </profile>
+        <profile>
+            <id>production</id>
+            <properties>
+              <tomcat.username>utopia</tomcat.username>
+              <tomcat.password>PASSWORD</tomcat.password>
+              <tomcat.host>localhost</tomcat.host>
+              <tomcat.port>8080</tomcat.port>
+              <database.user>utopia</database.user>
+              <database.password>PASSWORD</database.password>
+              <database.name>utopia</database.name>
+              <database.host>127.0.0.1</database.host>              
+              <database.port>5432</database.port>
+            </properties>
+        </profile>        
+    </profiles>
+    <activeProfiles>
+      <activeProfile>production</activeProfile>
+      <activeProfile>test</activeProfile>
+    </activeProfiles>
+</settings>

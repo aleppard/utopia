@@ -29,7 +29,7 @@ public class ConnectionPool {
             // dataSource.databaseName=utopia
             // dataSource.portNumber=5432
             // dataSource.serverName=127.0.0.1
-            config = new HikariConfig("/properties/database.properties");
+            config = new HikariConfig("/properties/hikari.properties");
             datasource = new HikariDataSource(config);
         }
         catch (Exception exception) {
