@@ -3,12 +3,12 @@
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
   <profiles>
     <profile>
-      <id>test</id>
+      <id>development</id>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-        <tomcat.username>utopia</tomcat.username>
+        <tomcat.user>utopia</tomcat.user>
         <tomcat.password>PASSWORD</tomcat.password>
         <tomcat.host>localhost</tomcat.host>
         <tomcat.port>8080</tomcat.port>
@@ -22,7 +22,7 @@
     <profile>
       <id>production</id>
       <properties>
-        <tomcat.username>utopia</tomcat.username>
+        <tomcat.user>utopia</tomcat.user>
         <tomcat.password>PASSWORD</tomcat.password>
         <tomcat.host>localhost</tomcat.host>
         <tomcat.port>8080</tomcat.port>

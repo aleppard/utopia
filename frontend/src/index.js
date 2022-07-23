@@ -48,7 +48,8 @@ var visibility;
 // Frame rate when moving avatar
 const MOVE_FRAME_COUNT_PER_SECOND = 60;
 
-// Number of pixels to move avatar per frame.
+// Number of pixels to move avatar per frame. Should be a divisor of
+// the tile size.
 const MOVE_PIXEL_COUNT = 4;
 
 var move_key_down = null;
