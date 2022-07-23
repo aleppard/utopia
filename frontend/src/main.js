@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Prototype code (i.e. it's not meant to be good yet).
+import {Grid, Astar} from 'fast-astar';
 
 //The path to the image that we want to add.
 var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
@@ -54,10 +54,10 @@ const MOVE_PIXEL_COUNT = 4;
 var move_key_down = null;
 
 function isTraverseable(pixel_x, pixel_y) {
-    x_floor = Math.floor(pixel_x / tile_size);
-    x_ceil = Math.ceil(pixel_x / tile_size);
-    y_floor = Math.floor(pixel_y / tile_size);
-    y_ceil = Math.ceil(pixel_y / tile_size);     
+    var x_floor = Math.floor(pixel_x / tile_size);
+    var x_ceil = Math.ceil(pixel_x / tile_size);
+    var y_floor = Math.floor(pixel_y / tile_size);
+    var y_ceil = Math.ceil(pixel_y / tile_size);     
 
     return (is_traverseable[y_floor][x_floor] &&
             is_traverseable[y_floor][x_ceil] &&
@@ -68,17 +68,17 @@ function isTraverseable(pixel_x, pixel_y) {
 function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
     // @todo This is excessive. At most we need to redraw two tiles and
     // not even the entire two tiles.
-    x_floor = Math.floor(old_avatar_pixel_x / tile_size);
-    x_ceil = Math.ceil(old_avatar_pixel_x / tile_size);
-    y_floor = Math.floor(old_avatar_pixel_y / tile_size);
-    y_ceil = Math.ceil(old_avatar_pixel_y / tile_size);     
+    var x_floor = Math.floor(old_avatar_pixel_x / tile_size);
+    var x_ceil = Math.ceil(old_avatar_pixel_x / tile_size);
+    var y_floor = Math.floor(old_avatar_pixel_y / tile_size);
+    var y_ceil = Math.ceil(old_avatar_pixel_y / tile_size);     
 
     const coordinates = [[x_floor, y_floor],
                          [x_floor, y_ceil],
                          [x_ceil, y_floor],
                          [x_ceil, y_ceil]];
     coordinates.forEach(coordinate => {
-        tile = get_tile(coordinate[0], coordinate[1])
+        var tile = get_tile(coordinate[0], coordinate[1])
         draw_tile(ctx, tile,
                   coordinate[0] * tile_size - view_pixel_x,
                   coordinate[1] * tile_size - view_pixel_y,
@@ -125,7 +125,7 @@ function is_tile_visible(x, y) {
 function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, tile_height) {
     // @todo forEach
     for (var i = 0; i < tile.length; i++) {
-        tileId = tile[i]
+        var tileId = tile[i]
 
         // @todo Do we need the other arguments here?
         ctx.drawImage(images.get(tileId),
@@ -138,10 +138,10 @@ function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, ti
 
 function draw_tiles(ctx, tiles) {
     for (var i = 0; i < tiles.length; i++) {
-        tile = tiles[i]
-        x = tile[0]
-        y = tile[1]
-        tile = get_tile(x, y);
+        var tile = tiles[i]
+        var x = tile[0]
+        var y = tile[1]
+        var tile = get_tile(x, y);
 
         // TODO What about partial tiles?
         draw_tile(ctx, tile,
@@ -192,13 +192,16 @@ function draw_map() {
         view_pixel_y = view_pixel_y - view_pixel_y % MOVE_PIXEL_COUNT        
     }
 
-    view_x = Math.floor(view_pixel_x / tile_size)
-    view_y = Math.floor(view_pixel_y / tile_size)
+    var view_x = Math.floor(view_pixel_x / tile_size)
+    var view_y = Math.floor(view_pixel_y / tile_size)
     
-    tile_y_offset = 0
+    var tile_y_offset = 0
 
     for (var i = 0; tile_y_offset < height; i++) {
 
+        var source_tile_y_offset
+        var tile_height
+        
         if (i == 0) {
             source_tile_y_offset = view_pixel_y % tile_size
             tile_height = tile_size - source_tile_y_offset
@@ -212,10 +215,13 @@ function draw_map() {
             tile_height = tile_size
         }
         
-        tile_x_offset = 0
+        var tile_x_offset = 0
 
         for (var j = 0; tile_x_offset < width; j++) {
 
+            var source_tile_x_offset
+            var tile_width
+            
             if (j == 0) {
                 source_tile_x_offset = view_pixel_x % tile_size
                 tile_width = tile_size - source_tile_x_offset
@@ -229,7 +235,7 @@ function draw_map() {
                 tile_width = tile_size
             }
 
-            tile = get_tile(view_x + j, view_y + i)
+            var tile = get_tile(view_x + j, view_y + i)
             if (is_tile_visible(view_x + j, view_y + i)) {
                 draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
                           source_tile_x_offset, source_tile_y_offset,
@@ -246,7 +252,9 @@ function draw_map() {
 function draw_avatar() {
     var element = document.getElementById('main')
     var ctx = element.getContext('2d');
-
+    var img_x_offset
+    var img_y_offset    
+    
     if (last_avatar_direction == NORTH) {
         img_x_offset = 9 * tile_size
         img_y_offset = 7 * tile_size
@@ -281,11 +289,11 @@ function move_avatar(avatar_direction) {
     var ctx = element.getContext('2d');
     var move_view = false;
     
-    new_avatar_pixel_x = avatar_pixel_x
-    new_avatar_pixel_y = avatar_pixel_y
+    var new_avatar_pixel_x = avatar_pixel_x
+    var new_avatar_pixel_y = avatar_pixel_y
 
-    new_view_pixel_x = view_pixel_x
-    new_view_pixel_y = view_pixel_y
+    var new_view_pixel_x = view_pixel_x
+    var new_view_pixel_y = view_pixel_y
     
     if (avatar_direction == NORTH) {
         if (avatar_pixel_y > 0) {
@@ -333,8 +341,8 @@ function move_avatar(avatar_direction) {
     }
 
     if (isTraverseable(new_avatar_pixel_x, new_avatar_pixel_y)) {
-        old_avatar_pixel_x = avatar_pixel_x
-        old_avatar_pixel_y = avatar_pixel_y
+        var old_avatar_pixel_x = avatar_pixel_x
+        var old_avatar_pixel_y = avatar_pixel_y
         
         avatar_pixel_x = new_avatar_pixel_x
         avatar_pixel_y = new_avatar_pixel_y
@@ -342,7 +350,7 @@ function move_avatar(avatar_direction) {
         view_pixel_x = new_view_pixel_x
         view_pixel_y = new_view_pixel_y
 
-        newly_visible_tiles = update_visibility()
+        var newly_visible_tiles = update_visibility()
         
         if (move_view) {
             draw_map()
@@ -355,7 +363,7 @@ function move_avatar(avatar_direction) {
             draw_tiles(ctx, newly_visible_tiles);
         }
 
-        offset_newly_visible_tiles =
+        var offset_newly_visible_tiles =
             newly_visible_tiles.map(tile => [tile[0] + map.startX,
                                              tile[1] + map.startY])
 
@@ -387,8 +395,8 @@ function on_load() {
     canvas.addEventListener("touchstart", function (e) {
         var touch = e.touches[0];
 
-        x = touch.clientX / tile_size
-        y = touch.clientY / tile_size
+        var x = touch.clientX / tile_size
+        var y = touch.clientY / tile_size
         
         if (Math.abs(Math.round((avatar_pixel_x - view_pixel_x) / tile_size) - x) >
             Math.abs(Math.round((avatar_pixel_y - view_pixel_y) / tile_size) - y)) {
@@ -445,7 +453,7 @@ fetch(url)
         // Find unique tiles.
         for (var y = 0; y < map.height; y++) {
             for (var x = 0; x < map.width; x++) {
-                tile_list = map.tiles[y][x]
+                var tile_list = map.tiles[y][x]
                 for (var tileIndex = 0; tileIndex < tile_list.length; tileIndex++) {
                     images.set(tile_list[tileIndex], null);
                 }

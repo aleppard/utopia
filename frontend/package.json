@@ -1,0 +1,13 @@
+{
+    "name": "utopia",
+    "version": "0.0.1",
+    "dependencies": {
+        "fast-astar": "~1.0.6"
+    },
+    "devDependencies": {
+        "webpack-cli": "~4.10.0"
+    },
+    "scripts": {
+        "webpack": "webpack"
+    }
+}
