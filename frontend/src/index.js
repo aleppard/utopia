@@ -1,5 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 import {Grid, Astar} from 'fast-astar';
+import {GameMap} from './game-map';
 
 //The path to the image that we want to add.
 var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
@@ -40,7 +41,6 @@ var last_avatar_direction;
 var avatar_margin = 5;
 
 var map;
-var is_traverseable;
 var images = new Map();
 
 var visibility;
@@ -60,10 +60,10 @@ function isTraverseable(pixel_x, pixel_y) {
     var y_floor = Math.floor(pixel_y / tile_size);
     var y_ceil = Math.ceil(pixel_y / tile_size);     
 
-    return (is_traverseable[y_floor][x_floor] &&
-            is_traverseable[y_floor][x_ceil] &&
-            is_traverseable[y_ceil][x_floor] &&
-            is_traverseable[y_ceil][x_ceil]);
+    return (map.isTileTraverseable(x_floor, y_floor) &&
+            map.isTileTraverseable(x_floor, y_ceil) &&
+            map.isTileTraverseable(x_ceil, y_floor) &&
+            map.isTileTraverseable(x_ceil, y_ceil));
 }
 
 function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
@@ -79,7 +79,7 @@ function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
                          [x_ceil, y_floor],
                          [x_ceil, y_ceil]];
     coordinates.forEach(coordinate => {
-        var tile = get_tile(coordinate[0], coordinate[1])
+        var tile = map.getTileIds(coordinate[0], coordinate[1])
         draw_tile(ctx, tile,
                   coordinate[0] * tile_size - view_pixel_x,
                   coordinate[1] * tile_size - view_pixel_y,
@@ -115,10 +115,6 @@ function update_visibility() {
     return made_visible
 }
 
-function get_tile(x, y) {
-    return map.tiles[y][x]
-}
-
 function is_tile_visible(x, y) {
     return visibility[y][x]
 }
@@ -142,7 +138,7 @@ function draw_tiles(ctx, tiles) {
         var tile = tiles[i]
         var x = tile[0]
         var y = tile[1]
-        var tile = get_tile(x, y);
+        var tile = map.getTileIds(x, y);
 
         // TODO What about partial tiles?
         draw_tile(ctx, tile,
@@ -236,7 +232,7 @@ function draw_map() {
                 tile_width = tile_size
             }
 
-            var tile = get_tile(view_x + j, view_y + i)
+            var tile = map.getTileIds(view_x + j, view_y + i)
             if (is_tile_visible(view_x + j, view_y + i)) {
                 draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
                           source_tile_x_offset, source_tile_y_offset,
@@ -444,26 +440,24 @@ const url = '/api/v0/session.json'
 fetch(url)
     .then(data => data.json())
     .then((json) => {
-        map = json.map
-        is_traverseable = json.map.isTraverseable;
+        map = new GameMap(json.map.startX,
+                          json.map.startY,
+                          json.map.width,
+                          json.map.height,
+                          json.map.tiles,
+                          json.map.isTraverseable);
         avatar_pixel_x = (json.user.x - map.startX) * tile_size;
         avatar_pixel_y = (json.user.y - map.startY) * tile_size;
         last_avatar_direction = json.user.direction;
         visibility = json.traversal.hasSeen;
 
-        // Find unique tiles.
-        for (var y = 0; y < map.height; y++) {
-            for (var x = 0; x < map.width; x++) {
-                var tile_list = map.tiles[y][x]
-                for (var tileIndex = 0; tileIndex < tile_list.length; tileIndex++) {
-                    images.set(tile_list[tileIndex], null);
-                }
-            }
-        }
-
+        var tileIds = map.getUniqueTileIds()
+        tileIds.forEach(tileId => {
+            images.set(tileId, null);
+        });
+        
         // Load tiles.
         var promises = [];
-        var tileIds = Array.from(images.keys());
         
         tileIds.forEach(tileId => {
             if (tileId != 0) {
