@@ -52,7 +52,14 @@ const MOVE_FRAME_COUNT_PER_SECOND = 60;
 // the tile size.
 const MOVE_PIXEL_COUNT = 4;
 
-var move_key_down = null;
+// The current direction to move towards.
+var targetMoveDirection = null;
+
+// The current position and path to move towards.
+var targetMovePosition = null;
+var targetMovePath = null;
+
+var move_interval = null;
 
 function isTraverseable(pixel_x, pixel_y) {
     var x_floor = Math.floor(pixel_x / tile_size);
@@ -279,7 +286,7 @@ function draw_avatar() {
                   tile_size, tile_size);    
 }
 
-function move_avatar(avatar_direction) {
+function moveAvatar(avatar_direction) {
     last_avatar_direction = avatar_direction;
 
     var element = document.getElementById('main')
@@ -389,39 +396,14 @@ function draw() {
 function on_load() {
     // Listen for touch events. Touching screen will move avatar.
     var canvas = document.getElementById('main')
-    canvas.addEventListener("touchstart", function (e) {
-        var touch = e.touches[0];
-
-        var x = touch.clientX / tile_size
-        var y = touch.clientY / tile_size
-        
-        if (Math.abs(Math.round((avatar_pixel_x - view_pixel_x) / tile_size) - x) >
-            Math.abs(Math.round((avatar_pixel_y - view_pixel_y) / tile_size) - y)) {
-            
-            if (x < Math.round(avatar_pixel_x - view_pixel_x / tile_size)) {
-                move_avatar(WEST);
-            }
-            else {
-                move_avatar(EAST);
-            }
-        }
-        else {
-            if (y < Math.round(avatar_pixel_y - view_pixel_y / tile_size)) {
-                move_avatar(NORTH);
-            }
-            else {
-                move_avatar(SOUTH);
-            }
-        }
-    });
-    
+    canvas.addEventListener("touchstart", screenTouched);    
     update_visibility();
     draw();
 }
 
 var resize_timeout;
 
-function resize_map() {
+function windowResized() {
     clearTimeout(resize_timeout);
     resize_timeout = setTimeout(draw, 100);    
 }
@@ -474,62 +456,196 @@ fetch(url)
             on_load();
         })
         
-        document.onkeydown = keyDown;
-        document.onkeyup = keyUp;
-        window.addEventListener("resize", resize_map);
+        document.onkeydown = keyPressed;
+        document.onkeyup = keyReleased;
+        document.addEventListener("click", mouseButtonClicked);
+        window.addEventListener("resize", windowResized);
 })
 
-var move_interval = null;
-
-function move() {
-    if (move_key_down == ARROW_UP) {    
-        move_avatar(NORTH);
-    }
-    else if (move_key_down == ARROW_DOWN) {
-        move_avatar(SOUTH);            
-    }
-    else if (move_key_down == ARROW_LEFT) {
-        move_avatar(WEST);           
+/**
+ * Move towards the current target which could either be a direction
+ * (e.g. North), or a position with a set of waypoints to follow.
+ */
+function moveAvatarTowardsTarget() {
+    if (targetMoveDirection != null) {
+        moveAvatar(targetMoveDirection);
     }
     else {
-        move_avatar(EAST);
+        // Remove the next waypoint on the path if we've reached it.
+        var nextWaypoint = targetMovePath[0];
+        if (avatar_pixel_x == nextWaypoint[0] &&
+            avatar_pixel_y == nextWaypoint[1]) {
+            targetMovePath.shift();
+        }
+        
+        if (targetMovePath.length > 0) {
+            // Move towards the next if there is any.
+            nextWaypoint = targetMovePath[0];
+            moveAvatar(findDirection([avatar_pixel_x, avatar_pixel_y],
+                                     nextWaypoint))
+        }
+        else {
+            // We can stop if we are already there.            
+            stopMovingAvatar();
+        }
     }
 }
 
-function startMove(keyCode) {
-    // Nothing more to do if we are already moving in the right direction.
-    if (move_key_down == keyCode) return;
+function startMovingAvatarTowardsPosition(x, y) {
+    // @todo Ignore if we are already moving towards the given position.
     
-    move_key_down = keyCode;
-    move();
+    // @todo Cache grid.
+    var grid = new Grid({
+        col:view_width,
+        row:view_height
+    });
 
+    // @todo We should include partial tiles at the edges of the screen
+    // if they are mostly visible.
+    var startX = Math.ceil(view_pixel_x / tile_size);
+    var startY = Math.ceil(view_pixel_y / tile_size);
+    
+    for (var viewX = startX; viewX < startX + view_width; viewX++) {
+        for (var viewY = startY; viewY < startY + view_height; viewY++) {
+            // Any tile that is not visible we assume is blocked. 
+            if (!visibility[viewY][viewX] || !map.isTileTraverseable(viewX, viewY)) {
+                grid.set([viewX - startX, viewY - startY],'value',1);
+            }
+        }
+    }
+
+    var avatarStartX = Math.round(avatar_pixel_x / tile_size) - startX;
+    var avatarStartY = Math.round(avatar_pixel_y / tile_size) - startY;
+    var avatarEndX = Math.floor((view_pixel_x + x) / tile_size) - startX;
+    var avatarEndY = Math.floor((view_pixel_y + y) / tile_size) - startY;
+
+    // @todo There is a bug here where avatarEndX/Y may be past local search
+    // window. We should expand the window and/or ignore the request.
+    
+    // Use the A-Star algorithm to find a path between the avatar's
+    // current position and the given position.
+    var astar = new Astar(grid);
+    var waypoints = astar.search(
+        [avatarStartX, avatarStartY],
+        [avatarEndX, avatarEndY],
+        {
+            rightAngle:true,
+            optimalResult:false
+        }
+    );
+
+    if (!waypoints) {
+        // Return if we can't find a path.
+        // @todo A better approach would be to move in the right direction
+        // and re-try as more tiles become visible.
+        return;
+    }
+
+    targetMovePosition = [x, y];
+
+    // Convert coordinates from local path finding map to actual map.
+    targetMovePath = waypoints.map(function(waypoint) {
+        return [(waypoint[0] + startX) * tile_size,
+                (waypoint[1] + startY) * tile_size];
+    });
+
+    // @todo We should do the first move now.
+    
+    startAvatarMovingTimerr();
+}
+
+function startMovingAvatarTowardsDirection(direction) {
+    // Nothing more to do if we are already moving in the same direction.
+    if (direction == targetMoveDirection) return;
+    targetMoveDirection = direction;
+    targetMovePosition = null;
+    targetMovePath = null;
+    
+    moveAvatarTowardsTarget();
+    startAvatarMovingTimerr();
+}
+
+function startAvatarMovingTimerr() {
     if (move_interval == null) {
-        move_interval = setInterval(move, 1000 / MOVE_FRAME_COUNT_PER_SECOND);
+        move_interval =
+            setInterval(moveAvatarTowardsTarget, 1000 / MOVE_FRAME_COUNT_PER_SECOND);
     }
 }
 
-function stopMove() {
+function stopMovingAvatar() {
     if (move_interval != null) {
         clearInterval(move_interval);
         move_interval = null;
-        move_key_down = null;
+        targetMoveDirection = null;
+        targetMovePosition = null;
+        targetMovePath = null;
     }
 }
 
-function keyDown(e) {
-    e = e || window.event;
-
-    if (e.keyCode == ARROW_UP ||
-        e.keyCode == ARROW_DOWN ||
-        e.keyCode == ARROW_LEFT ||
-        e.keyCode == ARROW_RIGHT) {
-        startMove(e.keyCode);
+/**
+ * Given a start coordindate and an end coordinate, return a direction
+ * we would need to travel to go from the start to the end coordinate.
+ */
+function findDirection(start, end) {
+    // @todo Pick the largest difference.
+    if (start[0] < end[0]) {
+        return EAST;
+    }
+    else if (start[0] > end[0]) {
+        return WEST;
+    }
+    else if (start[1] < end[1]) {
+        return SOUTH;
     }
     else {
-        move_key_down = null;
+        return NORTH;
     }
 }
 
-function keyUp(e) {
-    stopMove();
+/**
+ * Convert an array key code (i.e. up, down, left, right) to a direction
+ * that we should move in (e.g. north, south, east, west).
+ */
+function arrowKeyCodeToDirection(keyCode) {
+    if (keyCode == ARROW_UP) {    
+        return NORTH;
+    }
+    else if (keyCode == ARROW_DOWN) {
+        return SOUTH;
+    }
+    else if (keyCode == ARROW_LEFT) {
+        return WEST;
+    }
+    else {
+        return EAST;
+    }
+}
+
+function keyPressed(event) {
+    event = event || window.event;
+
+    if (event.keyCode == ARROW_UP ||
+        event.keyCode == ARROW_DOWN ||
+        event.keyCode == ARROW_LEFT ||
+        event.keyCode == ARROW_RIGHT) {
+        startMovingAvatarTowardsDirection(arrowKeyCodeToDirection(event.keyCode));
+    }
+    else {
+        stopMovingAvatar();
+    }
+}
+
+function keyReleased(event) {
+    stopMovingAvatar();
+}
+
+function screenTouched(event) {
+    // @todo If the user drags their fingers across the screen we could follow
+    // that path.
+    var touch = event.touches[0];
+    startMovingAvatarTowardsPosition(touch.clientX, touch.clientY);
+}
+
+function mouseButtonClicked(event) {
+    startMovingAvatarTowardsPosition(event.clientX, event.clientY)
 }
