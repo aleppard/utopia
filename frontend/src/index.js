@@ -1,6 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 import {Grid, Astar} from 'fast-astar';
 import {GameMap} from './game-map';
+import {Traversal} from './traversal';
 
 //The path to the image that we want to add.
 var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
@@ -41,9 +42,8 @@ var last_avatar_direction;
 var avatar_margin = 5;
 
 var map;
+var traversal;
 var images = new Map();
-
-var visibility;
 
 // Frame rate when moving avatar
 const MOVE_FRAME_COUNT_PER_SECOND = 60;
@@ -93,37 +93,6 @@ function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
                   0, 0,
                   tile_size, tile_size);
     });
-}
-                       
-function update_visibility() {
-    var made_visible = [];
-    // @todo This could be made much faster!
-    const RADIUS = 6;
-
-    var centre_x = Math.round(avatar_pixel_x / tile_size)
-    var centre_y = Math.round(avatar_pixel_y / tile_size)
-
-    for (var x = centre_x - RADIUS; x <= centre_x + RADIUS; x++) {
-        for (var y = centre_y - RADIUS; y <= centre_y + RADIUS; y++) {
-            if (x >= 0 && y >= 0 && x < map.width && y < map.height) {
-                if (!visibility[y][x]) {                
-                    if (Math.sqrt(Math.pow(centre_x - x, 2) +
-                                  Math.pow(centre_y - y, 2)) < RADIUS) {
-                        // @todo Use line of sight calculations.
-                        // @todo Standard x,y ordering.
-                        visibility[y][x] = true
-                        made_visible.push([x, y])
-                    }
-                }
-            }
-        }
-    }
-
-    return made_visible
-}
-
-function is_tile_visible(x, y) {
-    return visibility[y][x]
 }
 
 function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, tile_height) {
@@ -240,7 +209,7 @@ function draw_map() {
             }
 
             var tile = map.getTileIds(view_x + j, view_y + i)
-            if (is_tile_visible(view_x + j, view_y + i)) {
+            if (traversal.hasSeenTile(view_x + j, view_y + i)) {
                 draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
                           source_tile_x_offset, source_tile_y_offset,
                           tile_width, tile_height)
@@ -354,8 +323,9 @@ function moveAvatar(avatar_direction) {
         view_pixel_x = new_view_pixel_x
         view_pixel_y = new_view_pixel_y
 
-        var newly_visible_tiles = update_visibility()
-        
+        var newTilesSeen =
+            traversal.updateTilesSeen(Math.round(avatar_pixel_x / tile_size),
+                                      Math.round(avatar_pixel_y / tile_size));
         if (move_view) {
             draw_map()
         }
@@ -364,19 +334,19 @@ function moveAvatar(avatar_direction) {
             draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y)
 
             // Draw newly visible tiles
-            draw_tiles(ctx, newly_visible_tiles);
+            draw_tiles(ctx, newTilesSeen);
         }
 
-        var offset_newly_visible_tiles =
-            newly_visible_tiles.map(tile => [tile[0] + map.startX,
-                                             tile[1] + map.startY])
-
+        var offsetNewTilesSeen =
+            newTilesSeen.map(tile => [tile[0] + map.startX,
+                                      tile[1] + map.startY])
+        
         // @todo Pass pixel offset to server
         var session = { user: { x: Math.round(avatar_pixel_x / tile_size) + map.startX,
                                 y: Math.round(avatar_pixel_y / tile_size) + map.startY,
                                 direction: last_avatar_direction
                               },
-                        traversal: { seen: offset_newly_visible_tiles}}
+                        traversal: { seen: offsetNewTilesSeen}}
     
         fetch('/api/v0/session.json',
               {
@@ -396,8 +366,11 @@ function draw() {
 function on_load() {
     // Listen for touch events. Touching screen will move avatar.
     var canvas = document.getElementById('main')
-    canvas.addEventListener("touchstart", screenTouched);    
-    update_visibility();
+    canvas.addEventListener("touchstart", screenTouched);
+
+    // @todo This shouldn't be necessary.
+    traversal.updateTilesSeen(Math.round(avatar_pixel_x / tile_size),
+                              Math.round(avatar_pixel_y / tile_size));
     draw();
 }
 
@@ -428,10 +401,15 @@ fetch(url)
                           json.map.height,
                           json.map.tiles,
                           json.map.isTraverseable);
+        traversal = new Traversal(json.map.startX,
+                                  json.map.startY,
+                                  json.map.width,
+                                  json.map.height,
+                                  json.traversal.hasSeen)
+        
         avatar_pixel_x = (json.user.x - map.startX) * tile_size;
         avatar_pixel_y = (json.user.y - map.startY) * tile_size;
         last_avatar_direction = json.user.direction;
-        visibility = json.traversal.hasSeen;
 
         var tileIds = map.getUniqueTileIds()
         tileIds.forEach(tileId => {
@@ -508,7 +486,7 @@ function startMovingAvatarTowardsPosition(x, y) {
     for (var viewX = startX; viewX < startX + view_width; viewX++) {
         for (var viewY = startY; viewY < startY + view_height; viewY++) {
             // Any tile that is not visible we assume is blocked. 
-            if (!visibility[viewY][viewX] || !map.isTileTraverseable(viewX, viewY)) {
+            if (!traversal.hasSeenTile(viewX, viewY) || !map.isTileTraverseable(viewX, viewY)) {
                 grid.set([viewX - startX, viewY - startY],'value',1);
             }
         }
