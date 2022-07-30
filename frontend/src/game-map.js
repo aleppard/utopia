@@ -1,3 +1,4 @@
+////////////////////////////////////////////////////////////////////////////////
 export class GameMap {
     constructor(startX, startY, width, height, tiles, tileTraversability) {
         this.startX = startX
