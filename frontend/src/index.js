@@ -15,6 +15,9 @@ imgObj3.src = imgPath3;
 // @todo Get from back-end.
 var tile_size = 32;
 
+var mapStartX;
+var mapStartY;
+
 // Offset of view from start of map.
 var view_pixel_x = null;
 var view_pixel_y = null;
@@ -338,12 +341,12 @@ function moveAvatar(avatar_direction) {
         }
 
         var offsetNewTilesSeen =
-            newTilesSeen.map(tile => [tile[0] + map.startX,
-                                      tile[1] + map.startY])
+            newTilesSeen.map(tile => [tile[0] + mapStartX,
+                                      tile[1] + mapStartY])
         
         // @todo Pass pixel offset to server
-        var session = { user: { x: Math.round(avatar_pixel_x / tile_size) + map.startX,
-                                y: Math.round(avatar_pixel_y / tile_size) + map.startY,
+        var session = { user: { x: Math.round(avatar_pixel_x / tile_size) + mapStartX,
+                                y: Math.round(avatar_pixel_y / tile_size) + mapStartY,
                                 direction: last_avatar_direction
                               },
                         traversal: { seen: offsetNewTilesSeen}}
@@ -395,20 +398,18 @@ const url = '/api/v0/session.json'
 fetch(url)
     .then(data => data.json())
     .then((json) => {
-        map = new GameMap(json.map.startX,
-                          json.map.startY,
-                          json.map.width,
+        map = new GameMap(json.map.width,
                           json.map.height,
                           json.map.tiles,
                           json.map.isTraverseable);
-        traversal = new Traversal(json.map.startX,
-                                  json.map.startY,
-                                  json.map.width,
+        traversal = new Traversal(json.map.width,
                                   json.map.height,
                                   json.traversal.hasSeen)
-        
-        avatar_pixel_x = (json.user.x - map.startX) * tile_size;
-        avatar_pixel_y = (json.user.y - map.startY) * tile_size;
+
+        mapStartX = json.map.startX;
+        mapStartY = json.map.startY;        
+        avatar_pixel_x = (json.user.x - mapStartX) * tile_size;
+        avatar_pixel_y = (json.user.y - mapStartY) * tile_size;
         last_avatar_direction = json.user.direction;
 
         var tileIds = map.getUniqueTileIds()

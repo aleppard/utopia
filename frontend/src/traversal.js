@@ -1,19 +1,20 @@
 ////////////////////////////////////////////////////////////////////////////////
+import {QuadArray} from './quad-array';
+
 export class Traversal {
-    constructor(startX, startY, width, height, hasSeen) {
-        this.startX = startX
-        this.startY = startY
+    constructor(width, height, hasSeen) {
         this.width = width
         this.height = height
-        this.hasSeen = hasSeen
+        this.hasSeen = new QuadArray(width, height);
+        this.hasSeen.setArray(0, 0, hasSeen);
     }
 
     hasSeenTile(x, y) {
-        return this.hasSeen[y][x];
+        return this.hasSeen.get(x, y);
     }
 
     setTileSeen(x, y) {
-        this.hasSeen[y][x] = true;
+        this.hasSeen.set(x, y, true);
     }
     
     updateTilesSeen(centreX, centreY) {

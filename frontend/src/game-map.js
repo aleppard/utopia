@@ -1,16 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
+import {QuadArray} from './quad-array';
+
 export class GameMap {
-    constructor(startX, startY, width, height, tiles, tileTraversability) {
-        this.startX = startX
-        this.startY = startY
-        this.width = width
-        this.height = height
-        this.tiles = tiles
-        this.tileTraversability = tileTraversability
+    constructor(width, height, tiles, tileTraversability) {
+        this.width = width;
+        this.height = height;
+        this.tiles = new QuadArray(width, height);
+        this.tiles.setArray(0, 0, tiles);
+        this.tileTraversability = new QuadArray(width, height);
+        this.tileTraversability.setArray(0, 0, tileTraversability);
     }
 
     getTileIds(x, y) {
-        return this.tiles[y][x]
+        return this.tiles.get(x, y);
     }
 
     getUniqueTileIds() {
@@ -29,6 +31,6 @@ export class GameMap {
     }
     
     isTileTraverseable(x, y) {
-        return this.tileTraversability[y][x]
+        return this.tileTraversability.get(x, y);
     }
 }
