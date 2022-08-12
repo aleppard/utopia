@@ -445,7 +445,7 @@ fetch(url)
  * Move towards the current target which could either be a direction
  * (e.g. North), or a position with a set of waypoints to follow.
  */
-function moveAvatarTowardsTarget() {
+function moveAvatarTowardsTarget() {   
     if (targetMoveDirection != null) {
         moveAvatar(targetMoveDirection);
     }
@@ -530,7 +530,7 @@ function startMovingAvatarTowardsPosition(x, y) {
 
     // @todo We should do the first move now.
     
-    startAvatarMovingTimerr();
+    startAvatarMovingTimer();
 }
 
 function startMovingAvatarTowardsDirection(direction) {
@@ -541,10 +541,10 @@ function startMovingAvatarTowardsDirection(direction) {
     targetMovePath = null;
     
     moveAvatarTowardsTarget();
-    startAvatarMovingTimerr();
+    startAvatarMovingTimer();
 }
 
-function startAvatarMovingTimerr() {
+function startAvatarMovingTimer() {
     if (move_interval == null) {
         move_interval =
             setInterval(moveAvatarTowardsTarget, 1000 / MOVE_FRAME_COUNT_PER_SECOND);
@@ -600,7 +600,7 @@ function arrowKeyCodeToDirection(keyCode) {
     }
 }
 
-function keyPressed(event) {
+function keyPressed(event) {   
     event = event || window.event;
 
     if (event.keyCode == ARROW_UP ||
@@ -619,6 +619,8 @@ function keyReleased(event) {
 }
 
 function screenTouched(event) {
+    if (requestFullScreen()) return;
+    
     // @todo If the user drags their fingers across the screen we could follow
     // that path.
     var touch = event.touches[0];
@@ -626,5 +628,34 @@ function screenTouched(event) {
 }
 
 function mouseButtonClicked(event) {
+    if (requestFullScreen()) return;
+    
     startMovingAvatarTowardsPosition(event.clientX, event.clientY)
+}
+
+var hasRequestedFullScreen = false;
+function requestFullScreen() {
+    if (!hasRequestedFullScreen) {
+        hasRequestedFullScreen = true;
+        
+        var element = document.documentElement;
+        if (element.requestFullscreen) {
+            element.requestFullscreen();
+            return true;
+        }
+        else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+            return true;
+        }
+        else if (elemente.mozRequestFullScreen) {
+            element.mozRequestFullScreen();
+            return true;
+        }
+        else if (element.msRequestFullscreen) {
+            element.msRequestFullscreen();
+            return true;
+        }
+    }
+
+    return false;
 }
