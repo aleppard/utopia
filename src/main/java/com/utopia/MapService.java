@@ -99,8 +99,12 @@ public class MapService extends Service
                 // @todo Check the x, y is within bounds. If not call findMinMax()
                 // again.
                 map.tiles[y - minY][x - minX] = tiles;
-                map.isTraverseable[y - minY][x - minX] =
+
+                final boolean isTraverseable =
                     resultSet.getBoolean("is_traverseable");
+                if (isTraverseable) {
+                    map.isTraverseable[y - minY][x - minX] = 1;
+                }
             }
             
             return map;
@@ -160,8 +164,12 @@ public class MapService extends Service
                 // MYTODO this doesn't look right for getting a bit of the map
                 // should be startY etc.
                 map.tiles[y - minY][x - minX] = tiles;
-                map.isTraverseable[y - minY][x - minX] =
+
+                final boolean isTraverseable =
                     resultSet.getBoolean("is_traverseable");
+                if (isTraverseable) {
+                    map.isTraverseable[y - minY][x - minX] = 1;
+                }
             }
             
             return map;

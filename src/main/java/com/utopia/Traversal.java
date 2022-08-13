@@ -14,7 +14,7 @@ public class Traversal
     // (true/false) to save space. The following annotation does not seem
     // to work for arrays:
     // @JsonFormat(shape = JsonFormat.Shape.NUMBER)
-    // A better solution is to move to bson or gRPC.
+    // A better solution is to move to bson.
     public short[][] hasSeen;
 
     public Traversal(int startX, int startY, int width, int height) {
