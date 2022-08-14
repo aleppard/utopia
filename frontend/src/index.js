@@ -139,14 +139,14 @@ function draw_map() {
     var height = positionInfo.height;
     var width = positionInfo.width;
 
-    if (view_pixel_x == null) {
+    if (screen_width != width || screen_height != height) {
         screen_width = width;
-        screen_height = height
-
-        // @todo Remove these two
+        screen_height = height;
         view_width = Math.floor(width / tile_size);
         view_height = Math.floor(height / tile_size);
-
+    }
+    
+    if (view_pixel_x == null) {
         // Position the initial view such that the avatar is in the middle
         // of the screen.
         view_pixel_x = Math.floor(avatar_pixel_x / tile_size - view_width / 2) * tile_size
