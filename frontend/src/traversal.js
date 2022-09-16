@@ -2,11 +2,14 @@
 import {QuadArray} from './quad-array';
 
 export class Traversal {
-    constructor(width, height, hasSeen) {
-        this.width = width
-        this.height = height
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
         this.hasSeen = new QuadArray(width, height);
-        this.hasSeen.setArray(0, 0, hasSeen);
+    }
+
+    setHasSeen(startX, startY, hasSeen) {
+        this.hasSeen.setArray(startX, startY, hasSeen);
     }
 
     hasSeenTile(x, y) {

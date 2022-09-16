@@ -2,31 +2,40 @@
 import {QuadArray} from './quad-array';
 
 export class GameMap {
-    constructor(width, height, tiles, tileTraversability) {
+    constructor(width, height) {
         this.width = width;
         this.height = height;
         this.tiles = new QuadArray(width, height);
-        this.tiles.setArray(0, 0, tiles);
         this.tileTraversability = new QuadArray(width, height);
-        this.tileTraversability.setArray(0, 0, tileTraversability);
     }
 
+    setTiles(startX, startY, tiles) {
+        this.tiles.setArray(startX, startY, tiles);
+    }
+
+    setTileTraversability(startX, startY, tileTraversability) {
+        this.tileTraversability.setArray(startX, startY, tileTraversability);
+    }
+    
     getTileIds(x, y) {
         return this.tiles.get(x, y);
     }
 
-    getUniqueTileIds() {
+    getUniqueTileIds(startX, startY, width, height) {
         var tileIds = new Set();
 
-        for (var y = 0; y < this.height; y++) {
-            for (var x = 0; x < this.width; x++) {
+        console.assert(startX + width <= this.width);
+        console.assert(startY + height <= this.height);
+        
+        for (var y = startY; y < startY + height; y++) {
+            for (var x = startX; x < startX + width; x++) {
                 var singleTileIds = this.getTileIds(x, y)
                 singleTileIds.forEach(tileId => {
                     tileIds.add(tileId);
                 });
             }
         }
-        
+
         return Array.from(tileIds);
     }
     

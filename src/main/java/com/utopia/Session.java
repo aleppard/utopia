@@ -8,6 +8,8 @@ import java.util.List;
  */
 public class Session
 {
+    public Region mapBounds = null;
+    
     public static class User {
         public String name;
         public int x;
@@ -15,9 +17,9 @@ public class Session
         public String direction;
     }
 
-    public User user;
-    public Map map;
+    public User user = null;
+    public Map map = null;
 
     // @todo Perhaps this should be under User?
-    public Traversal traversal;
+    public Traversal traversal = null;
 }

@@ -1,7 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 import {Grid, Astar} from 'fast-astar';
-import {GameMap} from './game-map';
-import {Traversal} from './traversal';
+import {Session} from './session';
 
 //The path to the image that we want to add.
 var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
@@ -12,15 +11,12 @@ var imgObj3 = new Image();
 //Set the src of this Image object.
 imgObj3.src = imgPath3;
 
-// @todo Get from back-end.
-var tile_size = 32;
-
-var mapStartX;
-var mapStartY;
+// @todo We should store this in a centralised place.
+const TILE_SIZE = 32;
 
 // Offset of view from start of map.
-var view_pixel_x = null;
-var view_pixel_y = null;
+var viewPixelX = null;
+var viewPixelY = null;
 
 var view_width;
 var view_height;
@@ -28,8 +24,8 @@ var screen_width;
 var screen_height;
 
 // @todo use "tile_x" vs. "pixel_x".
-var avatar_pixel_x;
-var avatar_pixel_y;
+var avatarPixelX;
+var avatarPixelY;
 
 const NORTH = "north"
 const EAST = "east"
@@ -41,11 +37,10 @@ const ARROW_DOWN = '40';
 const ARROW_LEFT = '37';
 const ARROW_RIGHT = '39';
 
-var last_avatar_direction;
+var lastAvatarDirection;
 var avatar_margin = 5;
 
-var map;
-var traversal;
+var session;
 var images = new Map();
 
 // Frame rate when moving avatar
@@ -64,71 +59,102 @@ var targetMovePath = null;
 
 var move_interval = null;
 
-function isTraverseable(pixel_x, pixel_y) {
-    var x_floor = Math.floor(pixel_x / tile_size);
-    var x_ceil = Math.ceil(pixel_x / tile_size);
-    var y_floor = Math.floor(pixel_y / tile_size);
-    var y_ceil = Math.ceil(pixel_y / tile_size);     
+var isMapMissingTiles = false;
 
-    return (map.isTileTraverseable(x_floor, y_floor) &&
-            map.isTileTraverseable(x_floor, y_ceil) &&
-            map.isTileTraverseable(x_ceil, y_floor) &&
-            map.isTileTraverseable(x_ceil, y_ceil));
+function isTraverseable(pixel_x, pixel_y) {
+    var x_floor = Math.floor(pixel_x / TILE_SIZE);
+    var x_ceil = Math.ceil(pixel_x / TILE_SIZE);
+    var y_floor = Math.floor(pixel_y / TILE_SIZE);
+    var y_ceil = Math.ceil(pixel_y / TILE_SIZE);     
+
+    return (session.map.isTileTraverseable(x_floor, y_floor) &&
+            session.map.isTileTraverseable(x_floor, y_ceil) &&
+            session.map.isTileTraverseable(x_ceil, y_floor) &&
+            session.map.isTileTraverseable(x_ceil, y_ceil));
 }
 
-function draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y) {
+function draw_over_avatar(ctx, oldAvatarPixelX, oldAvatarPixelY) {
     // @todo This is excessive. At most we need to redraw two tiles and
     // not even the entire two tiles.
-    var x_floor = Math.floor(old_avatar_pixel_x / tile_size);
-    var x_ceil = Math.ceil(old_avatar_pixel_x / tile_size);
-    var y_floor = Math.floor(old_avatar_pixel_y / tile_size);
-    var y_ceil = Math.ceil(old_avatar_pixel_y / tile_size);     
+    var x_floor = Math.floor(oldAvatarPixelX / TILE_SIZE);
+    var x_ceil = Math.ceil(oldAvatarPixelX / TILE_SIZE);
+    var y_floor = Math.floor(oldAvatarPixelY / TILE_SIZE);
+    var y_ceil = Math.ceil(oldAvatarPixelY / TILE_SIZE);     
 
     const coordinates = [[x_floor, y_floor],
                          [x_floor, y_ceil],
                          [x_ceil, y_floor],
                          [x_ceil, y_ceil]];
     coordinates.forEach(coordinate => {
-        var tile = map.getTileIds(coordinate[0], coordinate[1])
+        var tile = session.map.getTileIds(coordinate[0], coordinate[1])
         draw_tile(ctx, tile,
-                  coordinate[0] * tile_size - view_pixel_x,
-                  coordinate[1] * tile_size - view_pixel_y,
+                  coordinate[0] * TILE_SIZE - viewPixelX,
+                  coordinate[1] * TILE_SIZE - viewPixelY,
                   0, 0,
-                  tile_size, tile_size);
+                  TILE_SIZE, TILE_SIZE);
     });
 }
 
 function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, tile_height) {
+    let isMissingTile = false;
+    
     // @todo forEach
     for (var i = 0; i < tile.length; i++) {
         var tileId = tile[i]
+        var tileImage = images.get(tileId);
 
+        if (!tileImage) {
+            isMissingTile = true;
+            continue;
+        }
+        
         // @todo Do we need the other arguments here?
-        ctx.drawImage(images.get(tileId),
+        ctx.drawImage(tileImage,
                       tile_x_offset,
                       tile_y_offset,
                       tile_width, tile_height, x, y,
                       tile_width, tile_height);
     }
+
+    return isMissingTile;
 }
 
 function draw_tiles(ctx, tiles) {
+    let isMissingTile = false;
+    
+    // @todo forEach
     for (var i = 0; i < tiles.length; i++) {
         var tile = tiles[i]
         var x = tile[0]
         var y = tile[1]
-        var tile = map.getTileIds(x, y);
+        var tile = session.map.getTileIds(x, y);
 
-        // TODO What about partial tiles?
-        draw_tile(ctx, tile,
-                  x * tile_size - view_pixel_x,
-                  y * tile_size - view_pixel_y,
-                  0, 0,
-                  tile_size, tile_size);
+        if (tile == null) {
+            // The tile has not been loaded yet. Draw a black square.
+            ctx.fillStyle = "rgb(0,0,0)";
+            ctx.fillRect(x * TILE_SIZE - viewPixelX,
+                         y * TILE_SIZE - viewPixelY,
+                         x * TILE_SIZE - viewPixelX + TILE_SIZE,
+                         y * TILE_SIZE - viewPixelY + TILE_SIZE);
+            isMissingTile = true;
+        }
+        else {
+            if (draw_tile(ctx, tile,
+                          x * TILE_SIZE - viewPixelX,
+                          y * TILE_SIZE - viewPixelY,
+                          0, 0,
+                          TILE_SIZE, TILE_SIZE)) {
+                isMissingTile = true;
+            }
+        }
     }
+
+    return isMissingTile;
 }
 
 function draw_map() {
+    isMapMissingTiles = false;
+    
     var element = document.getElementById('main')
     var ctx = element.getContext('2d');
     element.width = window.innerWidth;
@@ -138,38 +164,43 @@ function draw_map() {
 
     var height = positionInfo.height;
     var width = positionInfo.width;
+    let isNewView = !screen_width;
+    let hasViewChanged = false;
 
     if (screen_width != width || screen_height != height) {
         screen_width = width;
         screen_height = height;
-        view_width = Math.floor(width / tile_size);
-        view_height = Math.floor(height / tile_size);
+        view_width = Math.floor(width / TILE_SIZE);
+        view_height = Math.floor(height / TILE_SIZE);
+        hasViewChanged = true;
+    }
+
+    // Position the initial view such that the avatar is in the middle
+    // of the screen.
+    if (isNewView) {
+        viewPixelX = Math.floor(avatarPixelX / TILE_SIZE - view_width / 2) * TILE_SIZE
+        viewPixelY = Math.floor(avatarPixelY / TILE_SIZE - view_height / 2) * TILE_SIZE
     }
     
-    if (view_pixel_x == null) {
-        // Position the initial view such that the avatar is in the middle
-        // of the screen.
-        view_pixel_x = Math.floor(avatar_pixel_x / tile_size - view_width / 2) * tile_size
-        view_pixel_y = Math.floor(avatar_pixel_y / tile_size - view_height / 2) * tile_size
-
+    if (isNewView || hasViewChanged) {
         // Make sure that the view is not positioned before the start of the
         // map.
-        view_pixel_x = Math.max(view_pixel_x, 0)
-        view_pixel_y = Math.max(view_pixel_y, 0)
+        viewPixelX = Math.max(viewPixelX, 0)
+        viewPixelY = Math.max(viewPixelY, 0)
 
         // Make sure that the view is not positioned such that the view extends
         // past the edge of the map.
-        view_pixel_x = Math.min(view_pixel_x, map.width * tile_size - screen_width)        
-        view_pixel_y = Math.min(view_pixel_y, map.height * tile_size - screen_height)
+        viewPixelX = Math.min(viewPixelX, session.map.width * TILE_SIZE - screen_width)        
+        viewPixelY = Math.min(viewPixelY, session.map.height * TILE_SIZE - screen_height)
 
         // Make sure that the view is positioned modulo the pixel movement
         // amount so that the view is properly aligned to avatar movement.
-        view_pixel_x = view_pixel_x - view_pixel_x % MOVE_PIXEL_COUNT
-        view_pixel_y = view_pixel_y - view_pixel_y % MOVE_PIXEL_COUNT        
+        viewPixelX = viewPixelX - viewPixelX % MOVE_PIXEL_COUNT
+        viewPixelY = viewPixelY - viewPixelY % MOVE_PIXEL_COUNT        
     }
 
-    var view_x = Math.floor(view_pixel_x / tile_size)
-    var view_y = Math.floor(view_pixel_y / tile_size)
+    var view_x = Math.floor(viewPixelX / TILE_SIZE)
+    var view_y = Math.floor(viewPixelY / TILE_SIZE)
     
     var tile_y_offset = 0
 
@@ -179,16 +210,16 @@ function draw_map() {
         var tile_height
         
         if (i == 0) {
-            source_tile_y_offset = view_pixel_y % tile_size
-            tile_height = tile_size - source_tile_y_offset
+            source_tile_y_offset = viewPixelY % TILE_SIZE
+            tile_height = TILE_SIZE - source_tile_y_offset
         }
-        else if (tile_y_offset + tile_size >= height) {
+        else if (tile_y_offset + TILE_SIZE >= height) {
             source_tile_y_offset = 0            
             tile_height = height - tile_y_offset
         }
         else {
             source_tile_y_offset = 0
-            tile_height = tile_size
+            tile_height = TILE_SIZE
         }
         
         var tile_x_offset = 0
@@ -199,23 +230,30 @@ function draw_map() {
             var tile_width
             
             if (j == 0) {
-                source_tile_x_offset = view_pixel_x % tile_size
-                tile_width = tile_size - source_tile_x_offset
+                source_tile_x_offset = viewPixelX % TILE_SIZE
+                tile_width = TILE_SIZE - source_tile_x_offset
             }
-            else if (tile_x_offset + tile_size >= width) {
+            else if (tile_x_offset + TILE_SIZE >= width) {
                 source_tile_x_offset = 0                
                 tile_width = width - tile_x_offset
             }
             else {
                 source_tile_x_offset = 0
-                tile_width = tile_size
+                tile_width = TILE_SIZE
             }
 
-            var tile = map.getTileIds(view_x + j, view_y + i)
-            if (traversal.hasSeenTile(view_x + j, view_y + i)) {
-                draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
-                          source_tile_x_offset, source_tile_y_offset,
-                          tile_width, tile_height)
+            var tile = session.map.getTileIds(view_x + j, view_y + i)
+            const hasSeenTile =
+                  session.traversal.hasSeenTile(view_x + j, view_y + i);
+            if (hasSeenTile == null) {
+                isMapMissingTiles = true;
+            }
+            else if (hasSeenTile) {
+                if (draw_tile(ctx, tile, tile_x_offset, tile_y_offset,
+                              source_tile_x_offset, source_tile_y_offset,
+                              tile_width, tile_height)) {
+                    isMapMissingTiles = true;
+                }
             }
 
             tile_x_offset += tile_width
@@ -231,131 +269,141 @@ function draw_avatar() {
     var img_x_offset
     var img_y_offset    
     
-    if (last_avatar_direction == NORTH) {
-        img_x_offset = 9 * tile_size
-        img_y_offset = 7 * tile_size
+    if (lastAvatarDirection == NORTH) {
+        img_x_offset = 9 * TILE_SIZE
+        img_y_offset = 7 * TILE_SIZE
     }
-    else if (last_avatar_direction == WEST) {
-        img_x_offset = 9 * tile_size
-        img_y_offset = 5 * tile_size
+    else if (lastAvatarDirection == WEST) {
+        img_x_offset = 9 * TILE_SIZE
+        img_y_offset = 5 * TILE_SIZE
     }
-    else if (last_avatar_direction == SOUTH) {
-        img_x_offset = 9 * tile_size
-        img_y_offset = 4 * tile_size
+    else if (lastAvatarDirection == SOUTH) {
+        img_x_offset = 9 * TILE_SIZE
+        img_y_offset = 4 * TILE_SIZE
     }
     else {
-        img_x_offset = 9 * tile_size
-        img_y_offset = 6 * tile_size
+        img_x_offset = 9 * TILE_SIZE
+        img_y_offset = 6 * TILE_SIZE
     }
 
     ctx.drawImage(imgObj3,
                   img_x_offset,
                   img_y_offset,
-                  tile_size,
-                  tile_size,
-                  avatar_pixel_x - view_pixel_x,
-                  avatar_pixel_y - view_pixel_y,
-                  tile_size, tile_size);    
+                  TILE_SIZE,
+                  TILE_SIZE,
+                  avatarPixelX - viewPixelX,
+                  avatarPixelY - viewPixelY,
+                  TILE_SIZE, TILE_SIZE);    
 }
 
 function moveAvatar(avatar_direction) {
-    last_avatar_direction = avatar_direction;
+    lastAvatarDirection = avatar_direction;
 
     var element = document.getElementById('main')
     var ctx = element.getContext('2d');
     var move_view = false;
     
-    var new_avatar_pixel_x = avatar_pixel_x
-    var new_avatar_pixel_y = avatar_pixel_y
+    var new_avatarPixelX = avatarPixelX
+    var new_avatarPixelY = avatarPixelY
 
-    var new_view_pixel_x = view_pixel_x
-    var new_view_pixel_y = view_pixel_y
+    var new_viewPixelX = viewPixelX
+    var new_viewPixelY = viewPixelY
     
     if (avatar_direction == NORTH) {
-        if (avatar_pixel_y > 0) {
-            new_avatar_pixel_y = new_avatar_pixel_y - MOVE_PIXEL_COUNT
+        if (avatarPixelY > 0) {
+            new_avatarPixelY = new_avatarPixelY - MOVE_PIXEL_COUNT
             
-            if (view_pixel_y > 0 && Math.round((avatar_pixel_y - view_pixel_y) / tile_size) < avatar_margin) {
-                new_view_pixel_y -= MOVE_PIXEL_COUNT;
+            if (viewPixelY > 0 && Math.round((avatarPixelY - viewPixelY) / TILE_SIZE) < avatar_margin) {
+                new_viewPixelY -= MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
     else if (avatar_direction == WEST) {
-        if (avatar_pixel_x > 0) {
-            new_avatar_pixel_x = new_avatar_pixel_x - MOVE_PIXEL_COUNT
+        if (avatarPixelX > 0) {
+            new_avatarPixelX = new_avatarPixelX - MOVE_PIXEL_COUNT
             
-            if (view_pixel_x > 0 && Math.round((avatar_pixel_x - view_pixel_x) / tile_size) < avatar_margin) {
-                new_view_pixel_x -= MOVE_PIXEL_COUNT;
+            if (viewPixelX > 0 && Math.round((avatarPixelX - viewPixelX) / TILE_SIZE) < avatar_margin) {
+                new_viewPixelX -= MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
     else if (avatar_direction == SOUTH) {
-        if (avatar_pixel_y < map.height * tile_size) {
-            new_avatar_pixel_y = new_avatar_pixel_y + MOVE_PIXEL_COUNT
+        if (avatarPixelY < session.map.height * TILE_SIZE) {
+            new_avatarPixelY = new_avatarPixelY + MOVE_PIXEL_COUNT
 
-            if (view_pixel_y < (map.height * tile_size - screen_height)) {
-                if ((view_height - Math.round((avatar_pixel_y - view_pixel_y) / tile_size)) < avatar_margin) {
-                    new_view_pixel_y += MOVE_PIXEL_COUNT;
+            if (viewPixelY < (session.map.height * TILE_SIZE - screen_height)) {
+                if ((view_height - Math.round((avatarPixelY - viewPixelY) / TILE_SIZE)) < avatar_margin) {
+                    new_viewPixelY += MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
         }
     }
     else {
-        if (avatar_pixel_x < map.width * tile_size) {
-            new_avatar_pixel_x = new_avatar_pixel_x + MOVE_PIXEL_COUNT
+        if (avatarPixelX < session.map.width * TILE_SIZE) {
+            new_avatarPixelX = new_avatarPixelX + MOVE_PIXEL_COUNT
 
-            if (view_pixel_x < (map.width * tile_size - screen_width)) {
-                if ((view_width - Math.round((avatar_pixel_x - view_pixel_x) / tile_size)) < avatar_margin) {
-                    new_view_pixel_x += MOVE_PIXEL_COUNT;
+            if (viewPixelX < (session.map.width * TILE_SIZE - screen_width)) {
+                if ((view_width - Math.round((avatarPixelX - viewPixelX) / TILE_SIZE)) < avatar_margin) {
+                    new_viewPixelX += MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
         }
     }
 
-    if (isTraverseable(new_avatar_pixel_x, new_avatar_pixel_y)) {
-        var old_avatar_pixel_x = avatar_pixel_x
-        var old_avatar_pixel_y = avatar_pixel_y
+    if (isTraverseable(new_avatarPixelX, new_avatarPixelY)) {
+        var oldAvatarPixelX = avatarPixelX
+        var oldAvatarPixelY = avatarPixelY
+
+        avatarPixelX = new_avatarPixelX
+        avatarPixelY = new_avatarPixelY
+
+        let avatarX = Math.round(avatarPixelX / TILE_SIZE);
+        let avatarY = Math.round(avatarPixelY / TILE_SIZE);
         
-        avatar_pixel_x = new_avatar_pixel_x
-        avatar_pixel_y = new_avatar_pixel_y
-        
-        view_pixel_x = new_view_pixel_x
-        view_pixel_y = new_view_pixel_y
+        viewPixelX = new_viewPixelX
+        viewPixelY = new_viewPixelY
 
         var newTilesSeen =
-            traversal.updateTilesSeen(Math.round(avatar_pixel_x / tile_size),
-                                      Math.round(avatar_pixel_y / tile_size));
+            session.traversal.updateTilesSeen(avatarX, avatarY);
+        
         if (move_view) {
-            draw_map()
+            draw_map();
         }
         else {
             // Cover up old avatar position.
-            draw_over_avatar(ctx, old_avatar_pixel_x, old_avatar_pixel_y)
-
+            draw_over_avatar(ctx, oldAvatarPixelX, oldAvatarPixelY)
+            
             // Draw newly visible tiles
             draw_tiles(ctx, newTilesSeen);
         }
-
-        var offsetNewTilesSeen =
-            newTilesSeen.map(tile => [tile[0] + mapStartX,
-                                      tile[1] + mapStartY])
         
-        // @todo Pass pixel offset to server
-        var session = { user: { x: Math.round(avatar_pixel_x / tile_size) + mapStartX,
-                                y: Math.round(avatar_pixel_y / tile_size) + mapStartY,
-                                direction: last_avatar_direction
-                              },
-                        traversal: { seen: offsetNewTilesSeen}}
-    
-        fetch('/api/v0/session.json',
-              {
-                  method:'PUT',
-                  body:JSON.stringify(session)
-              }).then();
+        // If the avatar has crossed a tile boundary then we need to send the
+        // new location to the server and potential load new parts of the map
+        // that might soon become visible.
+        if (Math.round(oldAvatarPixelX / TILE_SIZE) != avatarX ||
+            Math.round(oldAvatarPixelY / TILE_SIZE) != avatarY) {
+            // @todo We perform these two calls to the server together.
+            // Can we combine them?
+            session.saveTraversal(newTilesSeen, avatarX, avatarY, lastAvatarDirection)
+            session.loadNearbyUnloadedRegions(avatarX,
+                                              avatarY,
+                                              view_width,
+                                              view_height)
+                .then(() => {
+                    // @todo Load any new tiles.
+
+                    // If the view is missing tiles because they haven't
+                    // been loaded yet redraw the view.
+                    if (isMapMissingTiles) {
+                        // @todo Only need to draw new tiles (if any).
+                        draw();
+                    }
+                })
+        }
     }
     
     draw_avatar()
@@ -372,8 +420,8 @@ function on_load() {
     canvas.addEventListener("touchstart", screenTouched);
 
     // @todo This shouldn't be necessary.
-    traversal.updateTilesSeen(Math.round(avatar_pixel_x / tile_size),
-                              Math.round(avatar_pixel_y / tile_size));
+    session.traversal.updateTilesSeen(Math.round(avatarPixelX / TILE_SIZE),
+                                      Math.round(avatarPixelY / TILE_SIZE));
     draw();
 }
 
@@ -394,25 +442,16 @@ function loadImage(url) {
     });
 }
 
-const url = '/api/v0/session.json'
-fetch(url)
-    .then(data => data.json())
-    .then((json) => {
-        map = new GameMap(json.map.width,
-                          json.map.height,
-                          json.map.tiles,
-                          json.map.isTraverseable);
-        traversal = new Traversal(json.map.width,
-                                  json.map.height,
-                                  json.traversal.hasSeen)
+function start() {
+    const screenWidth = Math.floor(window.screen.availWidth / TILE_SIZE);
+    const screenHeight = Math.floor(window.screen.availHeight / TILE_SIZE);    
 
-        mapStartX = json.map.startX;
-        mapStartY = json.map.startY;        
-        avatar_pixel_x = (json.user.x - mapStartX) * tile_size;
-        avatar_pixel_y = (json.user.y - mapStartY) * tile_size;
-        last_avatar_direction = json.user.direction;
+    session = new Session();
+    session.initialise(screenWidth, screenHeight).then((tileIds) => {
+        avatarPixelX = session.avatarX * TILE_SIZE;
+        avatarPixelY = session.avatarY * TILE_SIZE;
+        lastAvatarDirection = session.avatarDirection;
 
-        var tileIds = map.getUniqueTileIds()
         tileIds.forEach(tileId => {
             images.set(tileId, null);
         });
@@ -439,7 +478,10 @@ fetch(url)
         document.onkeyup = keyReleased;
         document.addEventListener("click", mouseButtonClicked);
         window.addEventListener("resize", windowResized);
-})
+    });
+}
+
+start();
 
 /**
  * Move towards the current target which could either be a direction
@@ -452,15 +494,15 @@ function moveAvatarTowardsTarget() {
     else {
         // Remove the next waypoint on the path if we've reached it.
         var nextWaypoint = targetMovePath[0];
-        if (avatar_pixel_x == nextWaypoint[0] &&
-            avatar_pixel_y == nextWaypoint[1]) {
+        if (avatarPixelX == nextWaypoint[0] &&
+            avatarPixelY == nextWaypoint[1]) {
             targetMovePath.shift();
         }
         
         if (targetMovePath.length > 0) {
             // Move towards the next if there is any.
             nextWaypoint = targetMovePath[0];
-            moveAvatar(findDirection([avatar_pixel_x, avatar_pixel_y],
+            moveAvatar(findDirection([avatarPixelX, avatarPixelY],
                                      nextWaypoint))
         }
         else {
@@ -481,22 +523,23 @@ function startMovingAvatarTowardsPosition(x, y) {
 
     // @todo We should include partial tiles at the edges of the screen
     // if they are mostly visible.
-    var startX = Math.ceil(view_pixel_x / tile_size);
-    var startY = Math.ceil(view_pixel_y / tile_size);
+    var startX = Math.ceil(viewPixelX / TILE_SIZE);
+    var startY = Math.ceil(viewPixelY / TILE_SIZE);
     
     for (var viewX = startX; viewX < startX + view_width; viewX++) {
         for (var viewY = startY; viewY < startY + view_height; viewY++) {
             // Any tile that is not visible we assume is blocked. 
-            if (!traversal.hasSeenTile(viewX, viewY) || !map.isTileTraverseable(viewX, viewY)) {
+            if (!session.traversal.hasSeenTile(viewX, viewY) ||
+                !session.map.isTileTraverseable(viewX, viewY)) {
                 grid.set([viewX - startX, viewY - startY],'value',1);
             }
         }
     }
 
-    var avatarStartX = Math.round(avatar_pixel_x / tile_size) - startX;
-    var avatarStartY = Math.round(avatar_pixel_y / tile_size) - startY;
-    var avatarEndX = Math.floor((view_pixel_x + x) / tile_size) - startX;
-    var avatarEndY = Math.floor((view_pixel_y + y) / tile_size) - startY;
+    var avatarStartX = Math.round(avatarPixelX / TILE_SIZE) - startX;
+    var avatarStartY = Math.round(avatarPixelY / TILE_SIZE) - startY;
+    var avatarEndX = Math.floor((viewPixelX + x) / TILE_SIZE) - startX;
+    var avatarEndY = Math.floor((viewPixelY + y) / TILE_SIZE) - startY;
 
     // @todo There is a bug here where avatarEndX/Y may be past local search
     // window. We should expand the window and/or ignore the request.
@@ -524,8 +567,8 @@ function startMovingAvatarTowardsPosition(x, y) {
 
     // Convert coordinates from local path finding map to actual map.
     targetMovePath = waypoints.map(function(waypoint) {
-        return [(waypoint[0] + startX) * tile_size,
-                (waypoint[1] + startY) * tile_size];
+        return [(waypoint[0] + startX) * TILE_SIZE,
+                (waypoint[1] + startY) * TILE_SIZE];
     });
 
     // @todo We should do the first move now.
@@ -564,6 +607,8 @@ function stopMovingAvatar() {
 /**
  * Given a start coordindate and an end coordinate, return a direction
  * we would need to travel to go from the start to the end coordinate.
+ *
+ * @todo Create a Compass class and move this functionality there. 
  */
 function findDirection(start, end) {
     // @todo Pick the largest difference.
