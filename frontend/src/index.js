@@ -1,5 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 import {Grid, Astar} from 'fast-astar';
+
+import * as Configuration from './configuration';
+import * as Direction from './direction';
+import * as Key from './key';
 import {Session} from './session';
 
 //The path to the image that we want to add.
@@ -10,9 +14,6 @@ var imgObj3 = new Image();
  
 //Set the src of this Image object.
 imgObj3.src = imgPath3;
-
-// @todo We should store this in a centralised place.
-const TILE_SIZE = 32;
 
 // Offset of view from start of map.
 var viewPixelX = null;
@@ -27,28 +28,11 @@ var screen_height;
 var avatarPixelX;
 var avatarPixelY;
 
-const NORTH = "north"
-const EAST = "east"
-const SOUTH = "south"
-const WEST = "west"
-
-const ARROW_UP = '38';
-const ARROW_DOWN = '40';
-const ARROW_LEFT = '37';
-const ARROW_RIGHT = '39';
-
 var lastAvatarDirection;
 var avatar_margin = 5;
 
 var session;
 var images = new Map();
-
-// Frame rate when moving avatar
-const MOVE_FRAME_COUNT_PER_SECOND = 60;
-
-// Number of pixels to move avatar per frame. Should be a divisor of
-// the tile size.
-const MOVE_PIXEL_COUNT = 4;
 
 // The current direction to move towards.
 var targetMoveDirection = null;
@@ -62,10 +46,10 @@ var move_interval = null;
 var isMapMissingTiles = false;
 
 function isTraverseable(pixel_x, pixel_y) {
-    var x_floor = Math.floor(pixel_x / TILE_SIZE);
-    var x_ceil = Math.ceil(pixel_x / TILE_SIZE);
-    var y_floor = Math.floor(pixel_y / TILE_SIZE);
-    var y_ceil = Math.ceil(pixel_y / TILE_SIZE);     
+    var x_floor = Math.floor(pixel_x / Configuration.TILE_SIZE);
+    var x_ceil = Math.ceil(pixel_x / Configuration.TILE_SIZE);
+    var y_floor = Math.floor(pixel_y / Configuration.TILE_SIZE);
+    var y_ceil = Math.ceil(pixel_y / Configuration.TILE_SIZE);     
 
     return (session.map.isTileTraverseable(x_floor, y_floor) &&
             session.map.isTileTraverseable(x_floor, y_ceil) &&
@@ -76,10 +60,10 @@ function isTraverseable(pixel_x, pixel_y) {
 function draw_over_avatar(ctx, oldAvatarPixelX, oldAvatarPixelY) {
     // @todo This is excessive. At most we need to redraw two tiles and
     // not even the entire two tiles.
-    var x_floor = Math.floor(oldAvatarPixelX / TILE_SIZE);
-    var x_ceil = Math.ceil(oldAvatarPixelX / TILE_SIZE);
-    var y_floor = Math.floor(oldAvatarPixelY / TILE_SIZE);
-    var y_ceil = Math.ceil(oldAvatarPixelY / TILE_SIZE);     
+    var x_floor = Math.floor(oldAvatarPixelX / Configuration.TILE_SIZE);
+    var x_ceil = Math.ceil(oldAvatarPixelX / Configuration.TILE_SIZE);
+    var y_floor = Math.floor(oldAvatarPixelY / Configuration.TILE_SIZE);
+    var y_ceil = Math.ceil(oldAvatarPixelY / Configuration.TILE_SIZE);     
 
     const coordinates = [[x_floor, y_floor],
                          [x_floor, y_ceil],
@@ -88,10 +72,10 @@ function draw_over_avatar(ctx, oldAvatarPixelX, oldAvatarPixelY) {
     coordinates.forEach(coordinate => {
         var tile = session.map.getTileIds(coordinate[0], coordinate[1])
         draw_tile(ctx, tile,
-                  coordinate[0] * TILE_SIZE - viewPixelX,
-                  coordinate[1] * TILE_SIZE - viewPixelY,
+                  coordinate[0] * Configuration.TILE_SIZE - viewPixelX,
+                  coordinate[1] * Configuration.TILE_SIZE - viewPixelY,
                   0, 0,
-                  TILE_SIZE, TILE_SIZE);
+                  Configuration.TILE_SIZE, Configuration.TILE_SIZE);
     });
 }
 
@@ -132,18 +116,18 @@ function draw_tiles(ctx, tiles) {
         if (tile == null) {
             // The tile has not been loaded yet. Draw a black square.
             ctx.fillStyle = "rgb(0,0,0)";
-            ctx.fillRect(x * TILE_SIZE - viewPixelX,
-                         y * TILE_SIZE - viewPixelY,
-                         x * TILE_SIZE - viewPixelX + TILE_SIZE,
-                         y * TILE_SIZE - viewPixelY + TILE_SIZE);
+            ctx.fillRect(x * Configuration.TILE_SIZE - viewPixelX,
+                         y * Configuration.TILE_SIZE - viewPixelY,
+                         x * Configuration.TILE_SIZE - viewPixelX + Configuration.TILE_SIZE,
+                         y * Configuration.TILE_SIZE - viewPixelY + Configuration.TILE_SIZE);
             isMissingTile = true;
         }
         else {
             if (draw_tile(ctx, tile,
-                          x * TILE_SIZE - viewPixelX,
-                          y * TILE_SIZE - viewPixelY,
+                          x * Configuration.TILE_SIZE - viewPixelX,
+                          y * Configuration.TILE_SIZE - viewPixelY,
                           0, 0,
-                          TILE_SIZE, TILE_SIZE)) {
+                          Configuration.TILE_SIZE, Configuration.TILE_SIZE)) {
                 isMissingTile = true;
             }
         }
@@ -170,16 +154,16 @@ function draw_map() {
     if (screen_width != width || screen_height != height) {
         screen_width = width;
         screen_height = height;
-        view_width = Math.floor(width / TILE_SIZE);
-        view_height = Math.floor(height / TILE_SIZE);
+        view_width = Math.floor(width / Configuration.TILE_SIZE);
+        view_height = Math.floor(height / Configuration.TILE_SIZE);
         hasViewChanged = true;
     }
 
     // Position the initial view such that the avatar is in the middle
     // of the screen.
     if (isNewView) {
-        viewPixelX = Math.floor(avatarPixelX / TILE_SIZE - view_width / 2) * TILE_SIZE
-        viewPixelY = Math.floor(avatarPixelY / TILE_SIZE - view_height / 2) * TILE_SIZE
+        viewPixelX = Math.floor(avatarPixelX / Configuration.TILE_SIZE - view_width / 2) * Configuration.TILE_SIZE
+        viewPixelY = Math.floor(avatarPixelY / Configuration.TILE_SIZE - view_height / 2) * Configuration.TILE_SIZE
     }
     
     if (isNewView || hasViewChanged) {
@@ -190,17 +174,19 @@ function draw_map() {
 
         // Make sure that the view is not positioned such that the view extends
         // past the edge of the map.
-        viewPixelX = Math.min(viewPixelX, session.map.width * TILE_SIZE - screen_width)        
-        viewPixelY = Math.min(viewPixelY, session.map.height * TILE_SIZE - screen_height)
+        viewPixelX = Math.min(viewPixelX,
+                              session.map.width * Configuration.TILE_SIZE - screen_width)        
+        viewPixelY = Math.min(viewPixelY,
+                              session.map.height * Configuration.TILE_SIZE - screen_height)
 
         // Make sure that the view is positioned modulo the pixel movement
         // amount so that the view is properly aligned to avatar movement.
-        viewPixelX = viewPixelX - viewPixelX % MOVE_PIXEL_COUNT
-        viewPixelY = viewPixelY - viewPixelY % MOVE_PIXEL_COUNT        
+        viewPixelX = viewPixelX - viewPixelX % Configuration.MOVE_PIXEL_COUNT
+        viewPixelY = viewPixelY - viewPixelY % Configuration.MOVE_PIXEL_COUNT
     }
 
-    var view_x = Math.floor(viewPixelX / TILE_SIZE)
-    var view_y = Math.floor(viewPixelY / TILE_SIZE)
+    var view_x = Math.floor(viewPixelX / Configuration.TILE_SIZE)
+    var view_y = Math.floor(viewPixelY / Configuration.TILE_SIZE)
     
     var tile_y_offset = 0
 
@@ -210,16 +196,16 @@ function draw_map() {
         var tile_height
         
         if (i == 0) {
-            source_tile_y_offset = viewPixelY % TILE_SIZE
-            tile_height = TILE_SIZE - source_tile_y_offset
+            source_tile_y_offset = viewPixelY % Configuration.TILE_SIZE
+            tile_height = Configuration.TILE_SIZE - source_tile_y_offset
         }
-        else if (tile_y_offset + TILE_SIZE >= height) {
+        else if (tile_y_offset + Configuration.TILE_SIZE >= height) {
             source_tile_y_offset = 0            
             tile_height = height - tile_y_offset
         }
         else {
             source_tile_y_offset = 0
-            tile_height = TILE_SIZE
+            tile_height = Configuration.TILE_SIZE
         }
         
         var tile_x_offset = 0
@@ -230,16 +216,16 @@ function draw_map() {
             var tile_width
             
             if (j == 0) {
-                source_tile_x_offset = viewPixelX % TILE_SIZE
-                tile_width = TILE_SIZE - source_tile_x_offset
+                source_tile_x_offset = viewPixelX % Configuration.TILE_SIZE
+                tile_width = Configuration.TILE_SIZE - source_tile_x_offset
             }
-            else if (tile_x_offset + TILE_SIZE >= width) {
+            else if (tile_x_offset + Configuration.TILE_SIZE >= width) {
                 source_tile_x_offset = 0                
                 tile_width = width - tile_x_offset
             }
             else {
                 source_tile_x_offset = 0
-                tile_width = TILE_SIZE
+                tile_width = Configuration.TILE_SIZE
             }
 
             var tile = session.map.getTileIds(view_x + j, view_y + i)
@@ -269,31 +255,31 @@ function draw_avatar() {
     var img_x_offset
     var img_y_offset    
     
-    if (lastAvatarDirection == NORTH) {
-        img_x_offset = 9 * TILE_SIZE
-        img_y_offset = 7 * TILE_SIZE
+    if (lastAvatarDirection == Direction.NORTH) {
+        img_x_offset = 9 * Configuration.TILE_SIZE
+        img_y_offset = 7 * Configuration.TILE_SIZE
     }
-    else if (lastAvatarDirection == WEST) {
-        img_x_offset = 9 * TILE_SIZE
-        img_y_offset = 5 * TILE_SIZE
+    else if (lastAvatarDirection == Direction.WEST) {
+        img_x_offset = 9 * Configuration.TILE_SIZE
+        img_y_offset = 5 * Configuration.TILE_SIZE
     }
-    else if (lastAvatarDirection == SOUTH) {
-        img_x_offset = 9 * TILE_SIZE
-        img_y_offset = 4 * TILE_SIZE
+    else if (lastAvatarDirection == Direction.SOUTH) {
+        img_x_offset = 9 * Configuration.TILE_SIZE
+        img_y_offset = 4 * Configuration.TILE_SIZE
     }
     else {
-        img_x_offset = 9 * TILE_SIZE
-        img_y_offset = 6 * TILE_SIZE
+        img_x_offset = 9 * Configuration.TILE_SIZE
+        img_y_offset = 6 * Configuration.TILE_SIZE
     }
 
     ctx.drawImage(imgObj3,
                   img_x_offset,
                   img_y_offset,
-                  TILE_SIZE,
-                  TILE_SIZE,
+                  Configuration.TILE_SIZE,
+                  Configuration.TILE_SIZE,
                   avatarPixelX - viewPixelX,
                   avatarPixelY - viewPixelY,
-                  TILE_SIZE, TILE_SIZE);    
+                  Configuration.TILE_SIZE, Configuration.TILE_SIZE);    
 }
 
 function moveAvatar(avatar_direction) {
@@ -309,45 +295,45 @@ function moveAvatar(avatar_direction) {
     var new_viewPixelX = viewPixelX
     var new_viewPixelY = viewPixelY
     
-    if (avatar_direction == NORTH) {
+    if (avatar_direction == Direction.NORTH) {
         if (avatarPixelY > 0) {
-            new_avatarPixelY = new_avatarPixelY - MOVE_PIXEL_COUNT
+            new_avatarPixelY = new_avatarPixelY - Configuration.MOVE_PIXEL_COUNT
             
-            if (viewPixelY > 0 && Math.round((avatarPixelY - viewPixelY) / TILE_SIZE) < avatar_margin) {
-                new_viewPixelY -= MOVE_PIXEL_COUNT;
+            if (viewPixelY > 0 && Math.round((avatarPixelY - viewPixelY) / Configuration.TILE_SIZE) < avatar_margin) {
+                new_viewPixelY -= Configuration.MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
-    else if (avatar_direction == WEST) {
+    else if (avatar_direction == Direction.WEST) {
         if (avatarPixelX > 0) {
-            new_avatarPixelX = new_avatarPixelX - MOVE_PIXEL_COUNT
+            new_avatarPixelX = new_avatarPixelX - Configuration.MOVE_PIXEL_COUNT
             
-            if (viewPixelX > 0 && Math.round((avatarPixelX - viewPixelX) / TILE_SIZE) < avatar_margin) {
-                new_viewPixelX -= MOVE_PIXEL_COUNT;
+            if (viewPixelX > 0 && Math.round((avatarPixelX - viewPixelX) / Configuration.TILE_SIZE) < avatar_margin) {
+                new_viewPixelX -= Configuration.MOVE_PIXEL_COUNT;
                 move_view = true;
             }
         }
     }
-    else if (avatar_direction == SOUTH) {
-        if (avatarPixelY < session.map.height * TILE_SIZE) {
-            new_avatarPixelY = new_avatarPixelY + MOVE_PIXEL_COUNT
+    else if (avatar_direction == Direction.SOUTH) {
+        if (avatarPixelY < session.map.height * Configuration.TILE_SIZE) {
+            new_avatarPixelY = new_avatarPixelY + Configuration.MOVE_PIXEL_COUNT
 
-            if (viewPixelY < (session.map.height * TILE_SIZE - screen_height)) {
-                if ((view_height - Math.round((avatarPixelY - viewPixelY) / TILE_SIZE)) < avatar_margin) {
-                    new_viewPixelY += MOVE_PIXEL_COUNT;
+            if (viewPixelY < (session.map.height * Configuration.TILE_SIZE - screen_height)) {
+                if ((view_height - Math.round((avatarPixelY - viewPixelY) / Configuration.TILE_SIZE)) < avatar_margin) {
+                    new_viewPixelY += Configuration.MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
         }
     }
     else {
-        if (avatarPixelX < session.map.width * TILE_SIZE) {
-            new_avatarPixelX = new_avatarPixelX + MOVE_PIXEL_COUNT
+        if (avatarPixelX < session.map.width * Configuration.TILE_SIZE) {
+            new_avatarPixelX = new_avatarPixelX + Configuration.MOVE_PIXEL_COUNT
 
-            if (viewPixelX < (session.map.width * TILE_SIZE - screen_width)) {
-                if ((view_width - Math.round((avatarPixelX - viewPixelX) / TILE_SIZE)) < avatar_margin) {
-                    new_viewPixelX += MOVE_PIXEL_COUNT;
+            if (viewPixelX < (session.map.width * Configuration.TILE_SIZE - screen_width)) {
+                if ((view_width - Math.round((avatarPixelX - viewPixelX) / Configuration.TILE_SIZE)) < avatar_margin) {
+                    new_viewPixelX += Configuration.MOVE_PIXEL_COUNT;
                     move_view = true;
                 }
             }
@@ -361,8 +347,8 @@ function moveAvatar(avatar_direction) {
         avatarPixelX = new_avatarPixelX
         avatarPixelY = new_avatarPixelY
 
-        let avatarX = Math.round(avatarPixelX / TILE_SIZE);
-        let avatarY = Math.round(avatarPixelY / TILE_SIZE);
+        let avatarX = Math.round(avatarPixelX / Configuration.TILE_SIZE);
+        let avatarY = Math.round(avatarPixelY / Configuration.TILE_SIZE);
         
         viewPixelX = new_viewPixelX
         viewPixelY = new_viewPixelY
@@ -384,8 +370,8 @@ function moveAvatar(avatar_direction) {
         // If the avatar has crossed a tile boundary then we need to send the
         // new location to the server and potential load new parts of the map
         // that might soon become visible.
-        if (Math.round(oldAvatarPixelX / TILE_SIZE) != avatarX ||
-            Math.round(oldAvatarPixelY / TILE_SIZE) != avatarY) {
+        if (Math.round(oldAvatarPixelX / Configuration.TILE_SIZE) != avatarX ||
+            Math.round(oldAvatarPixelY / Configuration.TILE_SIZE) != avatarY) {
             // @todo We perform these two calls to the server together.
             // Can we combine them?
             session.saveTraversal(newTilesSeen, avatarX, avatarY, lastAvatarDirection)
@@ -420,8 +406,8 @@ function on_load() {
     canvas.addEventListener("touchstart", screenTouched);
 
     // @todo This shouldn't be necessary.
-    session.traversal.updateTilesSeen(Math.round(avatarPixelX / TILE_SIZE),
-                                      Math.round(avatarPixelY / TILE_SIZE));
+    session.traversal.updateTilesSeen(Math.round(avatarPixelX / Configuration.TILE_SIZE),
+                                      Math.round(avatarPixelY / Configuration.TILE_SIZE));
     draw();
 }
 
@@ -443,13 +429,13 @@ function loadImage(url) {
 }
 
 function start() {
-    const screenWidth = Math.floor(window.screen.availWidth / TILE_SIZE);
-    const screenHeight = Math.floor(window.screen.availHeight / TILE_SIZE);    
+    const screenWidth = Math.floor(window.screen.availWidth / Configuration.TILE_SIZE);
+    const screenHeight = Math.floor(window.screen.availHeight / Configuration.TILE_SIZE);    
 
     session = new Session();
     session.initialise(screenWidth, screenHeight).then((tileIds) => {
-        avatarPixelX = session.avatarX * TILE_SIZE;
-        avatarPixelY = session.avatarY * TILE_SIZE;
+        avatarPixelX = session.avatarX * Configuration.TILE_SIZE;
+        avatarPixelY = session.avatarY * Configuration.TILE_SIZE;
         lastAvatarDirection = session.avatarDirection;
 
         tileIds.forEach(tileId => {
@@ -502,8 +488,8 @@ function moveAvatarTowardsTarget() {
         if (targetMovePath.length > 0) {
             // Move towards the next if there is any.
             nextWaypoint = targetMovePath[0];
-            moveAvatar(findDirection([avatarPixelX, avatarPixelY],
-                                     nextWaypoint))
+            moveAvatar(Direction.find([avatarPixelX, avatarPixelY],
+                                      nextWaypoint))
         }
         else {
             // We can stop if we are already there.            
@@ -523,8 +509,8 @@ function startMovingAvatarTowardsPosition(x, y) {
 
     // @todo We should include partial tiles at the edges of the screen
     // if they are mostly visible.
-    var startX = Math.ceil(viewPixelX / TILE_SIZE);
-    var startY = Math.ceil(viewPixelY / TILE_SIZE);
+    var startX = Math.ceil(viewPixelX / Configuration.TILE_SIZE);
+    var startY = Math.ceil(viewPixelY / Configuration.TILE_SIZE);
     
     for (var viewX = startX; viewX < startX + view_width; viewX++) {
         for (var viewY = startY; viewY < startY + view_height; viewY++) {
@@ -536,10 +522,10 @@ function startMovingAvatarTowardsPosition(x, y) {
         }
     }
 
-    var avatarStartX = Math.round(avatarPixelX / TILE_SIZE) - startX;
-    var avatarStartY = Math.round(avatarPixelY / TILE_SIZE) - startY;
-    var avatarEndX = Math.floor((viewPixelX + x) / TILE_SIZE) - startX;
-    var avatarEndY = Math.floor((viewPixelY + y) / TILE_SIZE) - startY;
+    var avatarStartX = Math.round(avatarPixelX / Configuration.TILE_SIZE) - startX;
+    var avatarStartY = Math.round(avatarPixelY / Configuration.TILE_SIZE) - startY;
+    var avatarEndX = Math.floor((viewPixelX + x) / Configuration.TILE_SIZE) - startX;
+    var avatarEndY = Math.floor((viewPixelY + y) / Configuration.TILE_SIZE) - startY;
 
     // @todo There is a bug here where avatarEndX/Y may be past local search
     // window. We should expand the window and/or ignore the request.
@@ -567,8 +553,8 @@ function startMovingAvatarTowardsPosition(x, y) {
 
     // Convert coordinates from local path finding map to actual map.
     targetMovePath = waypoints.map(function(waypoint) {
-        return [(waypoint[0] + startX) * TILE_SIZE,
-                (waypoint[1] + startY) * TILE_SIZE];
+        return [(waypoint[0] + startX) * Configuration.TILE_SIZE,
+                (waypoint[1] + startY) * Configuration.TILE_SIZE];
     });
 
     // @todo We should do the first move now.
@@ -590,7 +576,8 @@ function startMovingAvatarTowardsDirection(direction) {
 function startAvatarMovingTimer() {
     if (move_interval == null) {
         move_interval =
-            setInterval(moveAvatarTowardsTarget, 1000 / MOVE_FRAME_COUNT_PER_SECOND);
+            setInterval(moveAvatarTowardsTarget,
+                        1000 / Configuration.MOVE_FRAME_COUNT_PER_SECOND);
     }
 }
 
@@ -605,54 +592,29 @@ function stopMovingAvatar() {
 }
 
 /**
- * Given a start coordindate and an end coordinate, return a direction
- * we would need to travel to go from the start to the end coordinate.
- *
- * @todo Create a Compass class and move this functionality there. 
- */
-function findDirection(start, end) {
-    // @todo Pick the largest difference.
-    if (start[0] < end[0]) {
-        return EAST;
-    }
-    else if (start[0] > end[0]) {
-        return WEST;
-    }
-    else if (start[1] < end[1]) {
-        return SOUTH;
-    }
-    else {
-        return NORTH;
-    }
-}
-
-/**
  * Convert an array key code (i.e. up, down, left, right) to a direction
  * that we should move in (e.g. north, south, east, west).
  */
-function arrowKeyCodeToDirection(keyCode) {
-    if (keyCode == ARROW_UP) {    
-        return NORTH;
+function arrowKeyToDirection(keyCode) {
+    if (keyCode == Key.ARROW_UP) {    
+        return Direction.NORTH;
     }
-    else if (keyCode == ARROW_DOWN) {
-        return SOUTH;
+    else if (keyCode == Key.ARROW_DOWN) {
+        return Direction.SOUTH;
     }
-    else if (keyCode == ARROW_LEFT) {
-        return WEST;
+    else if (keyCode == Key.ARROW_LEFT) {
+        return Direction.WEST;
     }
     else {
-        return EAST;
+        return Direction.EAST;
     }
 }
 
 function keyPressed(event) {   
     event = event || window.event;
 
-    if (event.keyCode == ARROW_UP ||
-        event.keyCode == ARROW_DOWN ||
-        event.keyCode == ARROW_LEFT ||
-        event.keyCode == ARROW_RIGHT) {
-        startMovingAvatarTowardsDirection(arrowKeyCodeToDirection(event.keyCode));
+    if (Key.isArrowKey(event.keyCode)) {
+        startMovingAvatarTowardsDirection(arrowKeyToDirection(event.keyCode));
     }
     else {
         stopMovingAvatar();

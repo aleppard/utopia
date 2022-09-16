@@ -1,10 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
+import {QUAD_SIZE} from './configuration';
 import {Region} from './region';
-
-// The size of the quadrants that the array is broken up into.
-// This should be a power-of-2 for maximum performance.
-const QUAD_SIZE = 10;
 
 export class QuadArray {
     constructor(width, height) {
