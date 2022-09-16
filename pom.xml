@@ -10,7 +10,7 @@
   <packaging>war</packaging>
 
   <name>utopia</name>
-  <url>http://utopiathegame.com</url>
+  <url>https://utopiathegame.com</url>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -83,6 +83,7 @@
   </dependencies>
 
   <build>
+    <!-- We name the file ROOT which triggers Tomcat to deploy it at /. -->
     <finalName>ROOT</finalName>
     <resources>
       <resource>
