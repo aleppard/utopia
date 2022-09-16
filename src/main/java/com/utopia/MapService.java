@@ -10,6 +10,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,17 +52,27 @@ public class MapService extends Service
             // @todo
         }
     }
+
+    public int getStartX() {
+        return minX;
+    }
+
+    public int getStartY() {
+        return minY;
+    }
     
     public int getWidth() {
-        // Include the 0 index in the width.
-        // @todo This assumes minX < 0 and maxX > 0.
-        return Math.abs(minX) + maxX + 1;
+        // Adding one as the min and max are both inclusive.
+        return (maxX - minX + 1);
     }
 
     public int getHeight() {
-        // Include the 0 index in the height.
-        // @todo This assumes minY < 0 and maxY > 0.        
-        return Math.abs(minY) + maxY + 1;
+        // See getWidth().
+        return (maxY - minY + 1);
+    }
+
+    public Region getBounds() {
+        return new Region(getStartX(), getStartY(), getWidth(), getHeight());
     }
     
     public Map getMap() {
@@ -113,17 +124,20 @@ public class MapService extends Service
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
-            // MYTODO  - throws
+            // @todo
             return null;
         }
     }
 
+    // @todo Pass Region.
     public Map getMap(int startX, int startY, int width, int height) {
         try (Connection connection = getConnection()) {
+            // @todo Roll this protection out everywhere and move to
+            // the Region class.
             startX = Math.max(startX, minY);
             startY = Math.max(startY, minY);
-            width = Math.min(width, maxX - startX);
-            height = Math.min(height, maxY - startY);
+            width = Math.min(width, maxX - startX + 1);
+            height = Math.min(height, maxY - startY + 1);
             
             Map map = new Map(startX,
                               startY,
@@ -134,15 +148,21 @@ public class MapService extends Service
             preparedStatement.setInt(1, startX);
             preparedStatement.setInt(2, startY);
             preparedStatement.setInt(3, startX + width);
-            preparedStatement.setInt(4, startY + width);
+            preparedStatement.setInt(4, startY + height);
             
             ResultSet resultSet = preparedStatement.executeQuery();
 
             // @todo Refactor
             while (resultSet.next()) {
-                int x = resultSet.getInt("x");
-                int y = resultSet.getInt("y");
+                final int x = resultSet.getInt("x");
+                final int y = resultSet.getInt("y");
 
+                // Check returned result is within the bounds we requested.
+                Assert.assertTrue(x >= startX);
+                Assert.assertTrue(x < startX + width);
+                Assert.assertTrue(y >= startY);
+                Assert.assertTrue(y < startY + height);                
+                
                 List<Integer> tiles = new ArrayList();
                 tiles.add(resultSet.getInt("base_tile_id"));
 
@@ -161,14 +181,12 @@ public class MapService extends Service
                     if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
                 }
 
-                // MYTODO this doesn't look right for getting a bit of the map
-                // should be startY etc.
-                map.tiles[y - minY][x - minX] = tiles;
+                map.tiles[y - startY][x - startX] = tiles;
 
                 final boolean isTraverseable =
                     resultSet.getBoolean("is_traverseable");
                 if (isTraverseable) {
-                    map.isTraverseable[y - minY][x - minX] = 1;
+                    map.isTraverseable[y - startY][x - startX] = 1;
                 }
             }
             
