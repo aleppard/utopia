@@ -34,7 +34,7 @@ public class TraversalService extends Service
             preparedStatement.setInt(2, startX);
             preparedStatement.setInt(3, startY);
             preparedStatement.setInt(4, startX + width);
-            preparedStatement.setInt(5, startY + width);            
+            preparedStatement.setInt(5, startY + height);            
             
             ResultSet resultSet = preparedStatement.executeQuery();
             
@@ -42,8 +42,15 @@ public class TraversalService extends Service
                 final boolean hasSeen = resultSet.getBoolean("has_seen");
                 
                 if (hasSeen) {
-                    int x = resultSet.getInt("x");
-                    int y = resultSet.getInt("y");
+                    final int x = resultSet.getInt("x");
+                    final int y = resultSet.getInt("y");
+
+                    // Check returned result is within the bounds we requested.
+                    Assert.assertTrue(x >= startX);
+                    Assert.assertTrue(x < startX + width);
+                    Assert.assertTrue(y >= startY);
+                    Assert.assertTrue(y < startY + height);      
+                    
                     traversal.hasSeen[y - startY][x - startX] = 1;
                 }
             }
