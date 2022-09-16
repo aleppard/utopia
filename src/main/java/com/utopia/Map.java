@@ -8,6 +8,7 @@ import java.util.List;
  */
 public class Map
 {
+    // @todo Use Region class here.
     public int startX;
     public int startY;
     public int width;
