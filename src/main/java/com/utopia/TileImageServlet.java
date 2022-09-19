@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.apache.commons.io.IOUtils;
 
 /**
- * Servlet to add or retrieve a tile image.
+ * Servlet to add or retrieve tile images.
  */
 public class TileImageServlet extends HttpServlet
 {
@@ -42,6 +42,8 @@ public class TileImageServlet extends HttpServlet
      * Retrieve a tile image.
      *
      * GET /tile.png?id=...
+     *
+     * @todo Add support for retrieving multiple tiles in a single request.
      */
     @Override public void doGet(HttpServletRequest request,
                                 HttpServletResponse response)
