@@ -1,6 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // Frame rate when moving avatar.
+// @todo Rename to FRAME_RATE when we animate the background image.
 export const MOVE_FRAME_COUNT_PER_SECOND = 60;
 
 // Number of pixels to move avatar per frame. Should be a divisor of
