@@ -1,8 +1,14 @@
 package com.utopia;
 
-public class Tile {
-    boolean isTraverseable;
-    String code;
-    String description;
-}
+import com.fasterxml.jackson.annotation.JsonProperty;
 
+public class Tile {
+    @JsonProperty
+    public boolean isTraverseable;
+
+    @JsonProperty
+    public String code;
+
+    @JsonProperty
+    public String description;
+}
