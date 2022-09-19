@@ -3,8 +3,39 @@
 -- @todo Add north-east, north-west etc for diagonal movements.
 CREATE TYPE direction_type AS ENUM ('north', 'east', 'south', 'west');
 
+CREATE TYPE tile_type AS ENUM ('land', 'water');
+
+-- @todo Move images into separate table.
+CREATE TABLE IF NOT EXISTS tiles(
+       id SERIAL PRIMARY KEY,
+       tile_type tile_type NOT NULL,
+       is_traverseable BOOLEAN NOT NULL,
+       code VARCHAR(4) NOT NULL UNIQUE,
+       image BYTEA,
+       description VARCHAR(128));
+
+CREATE TYPE avatar_type AS ENUM ('user');
+
+-- An avatar is a composite image or sprite of a user or a game creature.
+-- @todo Move avatar images into separate table.
+CREATE TABLE IF NOT EXISTS avatars(
+       id SERIAL PRIMARY KEY,
+       avatar_type avatar_type NOT NULL,
+       -- Composite image containing 4 rows x 3 columns.
+       -- The first row is frames of the avatar facing south.
+       -- The second row is frames of the avatar facing west.
+       -- The third row is frames of the avatar facing east.
+       -- The fourth row is frames of the avatar facing north.
+       --
+       -- S1 S2 S3
+       -- W1 W2 W3
+       -- E1 E2 E3
+       -- N1 N2 N3
+       image BYTEA,
+       description VARCHAR(128));
+
 -- @todo Make table names singular?
--- @todo Change last_x, last_y to simply x and y.
+-- @todo Change last_x, last_y, last_direction to simply x, y, direction.
 CREATE TABLE IF NOT EXISTS users(
        id SERIAL PRIMARY KEY,
        created_time TIMESTAMP NOT NULL,
@@ -13,6 +44,7 @@ CREATE TABLE IF NOT EXISTS users(
        last_y INTEGER NOT NULL,
        last_direction direction_type NOT NULL,
        avatar_name VARCHAR(64) NOT NULL,
+       avatar_id INTEGER REFERENCES avatars,
        email VARCHAR(64),
        CHECK (last_seen_time >= created_time));
 
@@ -38,23 +70,6 @@ CREATE TABLE IF NOT EXISTS inventory(
        item_id INTEGER REFERENCES items NOT NULL,
        user_id INTEGER REFERENCES users NOT NULL,
        item_count INTEGER NOT NULL);
-
-CREATE TYPE tile_type AS ENUM ('land', 'water');
-
--- @todo Move images into separate table?
-CREATE TABLE IF NOT EXISTS tiles(
-       id SERIAL PRIMARY KEY,
-       tile_type tile_type NOT NULL,
-       is_traverseable BOOLEAN NOT NULL,
-       code VARCHAR(4) NOT NULL UNIQUE,
-       image BYTEA,
-       description VARCHAR(128));
-
-CREATE TABLE IF NOT EXISTS sprites(
-       id SERIAL PRIMARY KEY,
-       facing_direction direction_type NOT NULL,
-       imaage BYTEA,
-       description VARCHAR(128));
 
 CREATE TABLE IF NOT EXISTS game_map(
        x INTEGER NOT NULL,

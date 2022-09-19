@@ -16,31 +16,28 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Access user entities in the database.
  */
 public class UserService extends Service
 {
     private static final Logger LOGGER =
         Logger.getLogger(UserService.class.getName());
 
-    private NameGenerator nameGenerator = new NameGenerator();
-    
-    public User createNewUser() {
+    public User createNewUser(final String name,
+                              int x, int y,
+                              final String direction,
+                              final long avatarId) {
         final OffsetDateTime now = OffsetDateTime.now();
-        // @todo Should check this is traverseable.
-        final int x = 6;
-        final int y = 6;
-        final String direction = "east";
-        final String name = nameGenerator.generateName();
 
         try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement =
                 connection.prepareStatement
-                ("INSERT INTO users (created_time, last_seen_time, last_x, last_y, last_direction, avatar_name) VALUES (?, ?, ?, ?, ?::direction_type, ?)",
+                ("INSERT INTO users (created_time, last_seen_time, last_x, last_y, last_direction, avatar_name, avatar_id) VALUES (?, ?, ?, ?, ?::direction_type, ?, ?)",
                  Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setTimestamp
                 (1,
@@ -54,6 +51,7 @@ public class UserService extends Service
             preparedStatement.setInt(4, y);
             preparedStatement.setString(5, direction);
             preparedStatement.setString(6, name);
+            preparedStatement.setLong(7, avatarId);
             preparedStatement.executeUpdate();
 
             ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
@@ -61,6 +59,7 @@ public class UserService extends Service
             
             User user = new User();
             user.id = generatedKeys.getLong(1);
+            user.avatarId = avatarId;
             user.createdTime = now;
             user.lastSeenTime = now;
             user.lastX = x;
@@ -81,7 +80,7 @@ public class UserService extends Service
             User user = new User();
             PreparedStatement preparedStatement =
                 connection.prepareStatement
-                ("SELECT created_time, last_seen_time, last_x, last_y, last_direction, avatar_name FROM users WHERE id=?");
+                ("SELECT created_time, last_seen_time, last_x, last_y, last_direction, avatar_name, avatar_id FROM users WHERE id=?");
             preparedStatement.setLong(1, userId);
             preparedStatement.executeQuery();
             
@@ -93,6 +92,7 @@ public class UserService extends Service
                 user.lastY = resultSet.getInt("last_y");
                 user.lastDirection = resultSet.getString("last_direction");
                 user.name = resultSet.getString("avatar_name");
+                user.avatarId = resultSet.getLong("avatar_id");
                 return user;
             }
         }

@@ -26,6 +26,7 @@ export class Session {
         this.avatarX = null;
         this.avatarY = null;
         this.avatarDirection = null;
+        this.avatarId = null;
 
         /** Set of regions we are currently loading from the server. */
         this.regionsLoading = new Set();
@@ -65,6 +66,7 @@ export class Session {
                 this.avatarX = json.user.x - this.mapStartX;
                 this.avatarY = json.user.y - this.mapStartY;
                 this.avatarDirection = json.user.direction;
+                this.avatarId = json.user.avatarId;
                 
                 return this.map.getUniqueTileIds
                 (json.map.startX - this.mapStartX,

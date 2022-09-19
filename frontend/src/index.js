@@ -4,16 +4,8 @@ import {Grid, Astar} from 'fast-astar';
 import * as Configuration from './configuration';
 import * as Direction from './direction';
 import * as Key from './key';
+import {AvatarImages} from './avatar-images';
 import {Session} from './session';
-
-//The path to the image that we want to add.
-var imgPath3 = '/images/heroic_spirits__vx_ace__by_kiradu60_d7hpnuy.png'
-
-//Create a new Image object.
-var imgObj3 = new Image();
- 
-//Set the src of this Image object.
-imgObj3.src = imgPath3;
 
 // Offset of view from start of map.
 var viewPixelX = null;
@@ -32,6 +24,7 @@ var lastAvatarDirection;
 var avatar_margin = 5;
 
 var session;
+var avatarImages = new AvatarImages();
 var images = new Map();
 
 // The current direction to move towards.
@@ -136,7 +129,7 @@ function draw_tiles(ctx, tiles) {
     return isMissingTile;
 }
 
-function draw_map() {
+function drawMap() {
     isMapMissingTiles = false;
     
     var element = document.getElementById('main')
@@ -249,37 +242,20 @@ function draw_map() {
     }
 }
 
-function draw_avatar() {
-    var element = document.getElementById('main')
-    var ctx = element.getContext('2d');
-    var img_x_offset
-    var img_y_offset    
+function drawAvatar() {
+    let element = document.getElementById('main')
+    let ctx = element.getContext('2d');
+    const avatarRegion = avatarImages.getRegion(lastAvatarDirection);
     
-    if (lastAvatarDirection == Direction.NORTH) {
-        img_x_offset = 9 * Configuration.TILE_SIZE
-        img_y_offset = 7 * Configuration.TILE_SIZE
-    }
-    else if (lastAvatarDirection == Direction.WEST) {
-        img_x_offset = 9 * Configuration.TILE_SIZE
-        img_y_offset = 5 * Configuration.TILE_SIZE
-    }
-    else if (lastAvatarDirection == Direction.SOUTH) {
-        img_x_offset = 9 * Configuration.TILE_SIZE
-        img_y_offset = 4 * Configuration.TILE_SIZE
-    }
-    else {
-        img_x_offset = 9 * Configuration.TILE_SIZE
-        img_y_offset = 6 * Configuration.TILE_SIZE
-    }
-
-    ctx.drawImage(imgObj3,
-                  img_x_offset,
-                  img_y_offset,
-                  Configuration.TILE_SIZE,
-                  Configuration.TILE_SIZE,
+    ctx.drawImage(avatarImages.get(session.avatarId),
+                  avatarRegion.startX,
+                  avatarRegion.startY,
+                  avatarRegion.width,
+                  avatarRegion.height,
                   avatarPixelX - viewPixelX,
                   avatarPixelY - viewPixelY,
-                  Configuration.TILE_SIZE, Configuration.TILE_SIZE);    
+                  Configuration.TILE_SIZE,
+                  Configuration.TILE_SIZE);    
 }
 
 function moveAvatar(avatar_direction) {
@@ -357,7 +333,7 @@ function moveAvatar(avatar_direction) {
             session.traversal.updateTilesSeen(avatarX, avatarY);
         
         if (move_view) {
-            draw_map();
+            drawMap();
         }
         else {
             // Cover up old avatar position.
@@ -392,12 +368,12 @@ function moveAvatar(avatar_direction) {
         }
     }
     
-    draw_avatar()
+    drawAvatar()
 }
 
 function draw() {
-    draw_map();
-    draw_avatar();
+    drawMap();
+    drawAvatar();
 }
 
 function on_load() {
@@ -428,46 +404,51 @@ function loadImage(url) {
     });
 }
 
-function start() {
+async function load() {
     const screenWidth = Math.floor(window.screen.availWidth / Configuration.TILE_SIZE);
     const screenHeight = Math.floor(window.screen.availHeight / Configuration.TILE_SIZE);    
 
     session = new Session();
-    session.initialise(screenWidth, screenHeight).then((tileIds) => {
-        avatarPixelX = session.avatarX * Configuration.TILE_SIZE;
-        avatarPixelY = session.avatarY * Configuration.TILE_SIZE;
-        lastAvatarDirection = session.avatarDirection;
-
-        tileIds.forEach(tileId => {
-            images.set(tileId, null);
-        });
-        
-        // Load tiles.
-        var promises = [];
-        
-        tileIds.forEach(tileId => {
-            if (tileId != 0) {
-                promises.push(loadImage('/api/v0/tile.png?id=' + tileId));
-            }
-        });
-        
-        Promise.allSettled(promises).then(results => {
-            // @todo Error handling. See promise.status.
-            results.forEach((promise, index) => {
-                images.set(tileIds[index], promise.value);
-            });
-            
-            on_load();
-        })
-        
-        document.onkeydown = keyPressed;
-        document.onkeyup = keyReleased;
-        document.addEventListener("click", mouseButtonClicked);
-        window.addEventListener("resize", windowResized);
+    const tileIds = await session.initialise(screenWidth, screenHeight);
+    
+    avatarPixelX = session.avatarX * Configuration.TILE_SIZE;
+    avatarPixelY = session.avatarY * Configuration.TILE_SIZE;
+    lastAvatarDirection = session.avatarDirection;
+    const avatarId = session.avatarId;
+    
+    tileIds.forEach(tileId => {
+        images.set(tileId, null);
     });
+    
+    // Load tile images.
+    var promises = [];
+    
+    tileIds.forEach(tileId => {
+        if (tileId != 0) {
+            promises.push(loadImage('/api/v0/tile.png?id=' + tileId));
+        }
+    });
+
+    // Load avatar image.
+    await avatarImages.load(avatarId);
+    
+    Promise.allSettled(promises).then(results => {
+        // @todo Error handling. See promise.status.
+        results.forEach((promise, index) => {
+            images.set(tileIds[index], promise.value);
+        });
+        
+        on_load();
+    })
+
+    document.onkeydown = keyPressed;
+    document.onkeyup = keyReleased;
+    document.addEventListener("click", mouseButtonClicked);
+    window.addEventListener("resize", windowResized);
 }
 
-start();
+load().then(() => {
+});
 
 /**
  * Move towards the current target which could either be a direction

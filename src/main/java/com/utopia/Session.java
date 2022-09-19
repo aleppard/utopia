@@ -12,6 +12,7 @@ public class Session
     
     public static class User {
         public String name;
+        public long avatarId;
         public int x;
         public int y;
         public String direction;

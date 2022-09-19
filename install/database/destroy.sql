@@ -1,13 +1,5 @@
 -- \i destroy.sql
-DROP TABLE traversal;
-DROP TABLE game_map;
-DROP TABLE sprites;
-DROP TABLE tiles;
-DROP TABLE inventory;
-DROP TABLE items;
-DROP TABLE tokens;
-DROP TABLE users;
-
-
+DROP TABLE IF EXISTS traversals, game_map, inventory, items, tokens, users, avatars, tiles;
+DROP TYPE IF EXISTS direction_type, tile_type, avatar_type;
 
 

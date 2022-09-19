@@ -211,10 +211,11 @@ public class MapService extends Service
         return true;
     }
     
-    public void setMap(Map map) {
+    public void setMap(InputMap map) {
         HashMap<Integer, Boolean> traverseability =
             tileService.getTraverseability();
 
+        // @todo Probably faster to store each row separately.
         try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO game_map (x, y, base_tile_id, overlay_tile1_id, overlay_tile2_id, overlay_tile3_id, is_traverseable) VALUES (?, ?, ?, ?, ?, ?, ?)");           
             for (int i = 0; i < map.height; i++) {

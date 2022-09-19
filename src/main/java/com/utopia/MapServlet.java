@@ -68,7 +68,7 @@ public class MapServlet extends HttpServlet
 
         // @todo Secure this end-point.
         ObjectMapper mapper = new ObjectMapper();        
-        Map map = mapper.readValue(request.getReader(), Map.class);
+        InputMap map = mapper.readValue(request.getReader(), InputMap.class);
         service.setMap(map);
     }
 }

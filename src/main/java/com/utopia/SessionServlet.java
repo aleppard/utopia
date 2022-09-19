@@ -28,6 +28,8 @@ public class SessionServlet extends HttpServlet
     private TokenService tokenService = new TokenService();
     private TraversalService traversalService = new TraversalService();
     private UserService userService = new UserService();
+    private CreateNewUserService createNewUserService =
+        new CreateNewUserService(userService);
     
     private Cookie findCookie(HttpServletRequest request) {
         final String contextPath = request.getContextPath();
@@ -87,7 +89,7 @@ public class SessionServlet extends HttpServlet
         }
         
         if (user == null) {
-            user = userService.createNewUser();
+            user = createNewUserService.create();
             final String tokenString = tokenService.createToken(user.id);
             response.addCookie(createCookie(tokenString));
         }
@@ -105,6 +107,8 @@ public class SessionServlet extends HttpServlet
         if (isNewUser) {
             // @todo For new users we do this here and on the client.
             // We shouldn't do it for both.
+            // @todo We should do this in CreateNewUserService. Why does
+            // this need the start region?
             traversalService.updateUserSeen
                 (user.id,
                  TraversalService.calculateSeen(startRegion.startX,
@@ -118,6 +122,7 @@ public class SessionServlet extends HttpServlet
         Session session = new Session();
         Session.User sessionUser = new Session.User();
         sessionUser.name = user.name;
+        sessionUser.avatarId = user.avatarId;
         sessionUser.x = user.lastX;
         sessionUser.y = user.lastY;
         sessionUser.direction = user.lastDirection;

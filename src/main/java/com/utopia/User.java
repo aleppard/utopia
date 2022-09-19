@@ -14,5 +14,6 @@ public class User
     public int lastY;
     public String lastDirection;
     public String name;
+    public long avatarId;    
     public String email;
 }

@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <web-app xmlns="http://java.sun.com/xml/ns/javaee" version="3.0">
     <servlet>
+        <servlet-name>avatar</servlet-name>
+        <servlet-class>com.utopia.AvatarServlet</servlet-class>
+    </servlet>
+
+    <servlet>
+        <servlet-name>avatar_image</servlet-name>
+        <servlet-class>com.utopia.AvatarImageServlet</servlet-class>
+    </servlet>
+    
+    <servlet>
         <servlet-name>game</servlet-name>
         <servlet-class>com.utopia.GameServlet</servlet-class>
     </servlet>
@@ -24,6 +34,16 @@
         <servlet-name>tile_image</servlet-name>
         <servlet-class>com.utopia.TileImageServlet</servlet-class>
     </servlet>    
+
+    <servlet-mapping>
+        <servlet-name>avatar</servlet-name>
+        <url-pattern>/api/v0/avatar.json</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>avatar_image</servlet-name>
+        <url-pattern>/api/v0/avatar.png</url-pattern>
+    </servlet-mapping>        
     
     <servlet-mapping>
         <servlet-name>map</servlet-name>
