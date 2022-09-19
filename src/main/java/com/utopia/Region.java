@@ -1,7 +1,7 @@
 package com.utopia;
 
 /**
- * A class that defines a rectangular region in a larger space.
+ * A class that defines a 2D rectangular region in a larger space.
  */
 public class Region {
     public int startX = 0;
