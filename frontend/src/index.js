@@ -6,6 +6,7 @@ import * as Direction from './direction';
 import * as Key from './key';
 import {AvatarImages} from './avatar-images';
 import {Session} from './session';
+import {TileImages} from './tile-images';
 
 // Offset of view from start of map.
 var viewPixelX = null;
@@ -25,7 +26,7 @@ var avatar_margin = 5;
 
 var session;
 var avatarImages = new AvatarImages();
-var images = new Map();
+var tileImages = new TileImages();
 
 // The current direction to move towards.
 var targetMoveDirection = null;
@@ -78,7 +79,7 @@ function draw_tile(ctx, tile, x, y, tile_x_offset, tile_y_offset, tile_width, ti
     // @todo forEach
     for (var i = 0; i < tile.length; i++) {
         var tileId = tile[i]
-        var tileImage = images.get(tileId);
+        var tileImage = tileImages.get(tileId);
 
         if (!tileImage) {
             isMissingTile = true;
@@ -376,79 +377,12 @@ function draw() {
     drawAvatar();
 }
 
-function on_load() {
-    // Listen for touch events. Touching screen will move avatar.
-    var canvas = document.getElementById('main')
-    canvas.addEventListener("touchstart", screenTouched);
-
-    // @todo This shouldn't be necessary.
-    session.traversal.updateTilesSeen(Math.round(avatarPixelX / Configuration.TILE_SIZE),
-                                      Math.round(avatarPixelY / Configuration.TILE_SIZE));
-    draw();
-}
-
 var resize_timeout;
 
 function windowResized() {
     clearTimeout(resize_timeout);
     resize_timeout = setTimeout(draw, 100);    
 }
-
-function loadImage(url) {
-    return new Promise(resolve => {
-        const image = new Image();
-        image.addEventListener('load', () => {
-            resolve(image);
-        });
-        image.src = url;
-    });
-}
-
-async function load() {
-    const screenWidth = Math.floor(window.screen.availWidth / Configuration.TILE_SIZE);
-    const screenHeight = Math.floor(window.screen.availHeight / Configuration.TILE_SIZE);    
-
-    session = new Session();
-    const tileIds = await session.initialise(screenWidth, screenHeight);
-    
-    avatarPixelX = session.avatarX * Configuration.TILE_SIZE;
-    avatarPixelY = session.avatarY * Configuration.TILE_SIZE;
-    lastAvatarDirection = session.avatarDirection;
-    const avatarId = session.avatarId;
-    
-    tileIds.forEach(tileId => {
-        images.set(tileId, null);
-    });
-    
-    // Load tile images.
-    var promises = [];
-    
-    tileIds.forEach(tileId => {
-        if (tileId != 0) {
-            promises.push(loadImage('/api/v0/tile.png?id=' + tileId));
-        }
-    });
-
-    // Load avatar image.
-    await avatarImages.load(avatarId);
-    
-    Promise.allSettled(promises).then(results => {
-        // @todo Error handling. See promise.status.
-        results.forEach((promise, index) => {
-            images.set(tileIds[index], promise.value);
-        });
-        
-        on_load();
-    })
-
-    document.onkeydown = keyPressed;
-    document.onkeyup = keyReleased;
-    document.addEventListener("click", mouseButtonClicked);
-    window.addEventListener("resize", windowResized);
-}
-
-load().then(() => {
-});
 
 /**
  * Move towards the current target which could either be a direction
@@ -647,3 +581,37 @@ function requestFullScreen() {
 
     return false;
 }
+
+async function load() {
+    const screenWidth = Math.floor(window.screen.availWidth / Configuration.TILE_SIZE);
+    const screenHeight = Math.floor(window.screen.availHeight / Configuration.TILE_SIZE);    
+
+    session = new Session();
+    const tileIds = await session.initialise(screenWidth, screenHeight);
+    
+    avatarPixelX = session.avatarX * Configuration.TILE_SIZE;
+    avatarPixelY = session.avatarY * Configuration.TILE_SIZE;
+    lastAvatarDirection = session.avatarDirection;
+
+    let promises = tileImages.loadAll(tileIds);
+    promises.push(avatarImages.load(session.avatarId));
+    return Promise.allSettled(promises);
+}
+
+load().then(() => {
+    // Listen for touch events. Touching screen will move avatar.
+    var canvas = document.getElementById('main')
+    canvas.addEventListener("touchstart", screenTouched);
+
+    // Also listen for keyboard, mouse and re-size events.
+    document.onkeydown = keyPressed;
+    document.onkeyup = keyReleased;
+    document.addEventListener("click", mouseButtonClicked);
+    
+    window.addEventListener("resize", windowResized);
+
+    // @todo This shouldn't be necessary.
+    session.traversal.updateTilesSeen(Math.round(avatarPixelX / Configuration.TILE_SIZE),
+                                      Math.round(avatarPixelY / Configuration.TILE_SIZE));
+    draw();
+});
