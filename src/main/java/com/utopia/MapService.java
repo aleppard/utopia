@@ -15,7 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Access the game map stored in the database.
  */
 public class MapService extends Service
 {
@@ -89,27 +89,27 @@ public class MapService extends Service
                 int x = resultSet.getInt("x");
                 int y = resultSet.getInt("y");
 
-                List<Integer> tiles = new ArrayList();
-                tiles.add(resultSet.getInt("base_tile_id"));
+                List<Long> tileIds = new ArrayList();
+                tileIds.add(resultSet.getLong("base_tile_id"));
 
                 {
-                    int overlayTile1Id = resultSet.getInt("overlay_tile1_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile1Id);
+                    long overlayTile1Id = resultSet.getLong("overlay_tile1_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile1Id);
                 }
 
                 {
-                    int overlayTile2Id = resultSet.getInt("overlay_tile2_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile2Id);
+                    long overlayTile2Id = resultSet.getLong("overlay_tile2_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile2Id);
                 }
 
                 {
-                    int overlayTile3Id = resultSet.getInt("overlay_tile3_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
+                    long overlayTile3Id = resultSet.getLong("overlay_tile3_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile3Id);
                 }
 
                 // @todo Check the x, y is within bounds. If not call findMinMax()
                 // again.
-                map.tiles[y - minY][x - minX] = tiles;
+                map.tiles[y - minY][x - minX] = tileIds;
 
                 final boolean isTraverseable =
                     resultSet.getBoolean("is_traverseable");
@@ -163,25 +163,25 @@ public class MapService extends Service
                 Assert.assertTrue(y >= startY);
                 Assert.assertTrue(y < startY + height);                
                 
-                List<Integer> tiles = new ArrayList();
-                tiles.add(resultSet.getInt("base_tile_id"));
+                List<Long> tileIds = new ArrayList();
+                tileIds.add(resultSet.getLong("base_tile_id"));
 
                 {
-                    int overlayTile1Id = resultSet.getInt("overlay_tile1_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile1Id);
+                    long overlayTile1Id = resultSet.getLong("overlay_tile1_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile1Id);
                 }
 
                 {
-                    int overlayTile2Id = resultSet.getInt("overlay_tile2_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile2Id);
+                    long overlayTile2Id = resultSet.getLong("overlay_tile2_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile2Id);
                 }
 
                 {
-                    int overlayTile3Id = resultSet.getInt("overlay_tile3_id");
-                    if (!resultSet.wasNull()) tiles.add(overlayTile3Id);
+                    long overlayTile3Id = resultSet.getLong("overlay_tile3_id");
+                    if (!resultSet.wasNull()) tileIds.add(overlayTile3Id);
                 }
 
-                map.tiles[y - startY][x - startX] = tiles;
+                map.tiles[y - startY][x - startX] = tileIds;
 
                 final boolean isTraverseable =
                     resultSet.getBoolean("is_traverseable");
@@ -196,15 +196,15 @@ public class MapService extends Service
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
-            // MYTODO  - throws
+            // @todo
             return null;
         }
     }
 
     private static boolean isTraverseable
-        (final HashMap<Integer, Boolean> traverseability,
-         final List<Integer> tileIds) {
-        for (final Integer tileId : tileIds) {
+        (final HashMap<Long, Boolean> traverseability,
+         final List<Long> tileIds) {
+        for (final Long tileId : tileIds) {
             if (!traverseability.get(tileId)) return false;
         }
             
@@ -212,10 +212,11 @@ public class MapService extends Service
     }
     
     public void setMap(InputMap map) {
-        HashMap<Integer, Boolean> traverseability =
+        HashMap<Long, Boolean> traverseability =
             tileService.getTraverseability();
-
-        // @todo Probably faster to store each row separately.
+        HashMap<String, Long> tileCodeToIdMap =
+            tileService.getCodeToIdMap();
+        
         try (Connection connection = getConnection()) {        
             PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO game_map (x, y, base_tile_id, overlay_tile1_id, overlay_tile2_id, overlay_tile3_id, is_traverseable) VALUES (?, ?, ?, ?, ?, ?, ?)");           
             for (int i = 0; i < map.height; i++) {
@@ -224,39 +225,41 @@ public class MapService extends Service
                 for (int j = 0; j < map.width; j++) {
                     int x = map.startX + j;
 
-                    // @todo tiles -> tileIds.
-                    List<Integer> tiles = map.tiles[i][j];
                     preparedStatement.setInt(1, x);
                     preparedStatement.setInt(2, y);
 
-                    preparedStatement.setInt(3, tiles.get(0));
-                    if (tiles.size() > 1) {
-                        preparedStatement.setInt(4, tiles.get(1));
+                    final List<String> tileStrings = map.tiles[i][j];
+                    final List<Long> tileIds = tileStringsToIds(tileCodeToIdMap, tileStrings);
+                    
+                    preparedStatement.setLong(3, tileIds.get(0));
+                    if (tileIds.size() > 1) {
+                        preparedStatement.setLong(4, tileIds.get(1));
                     }
                     else {
                         preparedStatement.setNull(4, Types.INTEGER);
                     }
 
-                    if (tiles.size() > 2) {
-                        preparedStatement.setInt(5, tiles.get(2));
+                    if (tileIds.size() > 2) {
+                        preparedStatement.setLong(5, tileIds.get(2));
                     }
                     else {
                         preparedStatement.setNull(5, Types.INTEGER);
                     }
 
-                    if (tiles.size() > 3) {
-                        preparedStatement.setInt(6, tiles.get(3));
+                    if (tileIds.size() > 3) {
+                        preparedStatement.setLong(6, tileIds.get(3));
                     }
                     else {
                         preparedStatement.setNull(6, Types.INTEGER);
                     }                    
 
                     preparedStatement.setBoolean
-                        (7, isTraverseable(traverseability, tiles));
-                    
-                    preparedStatement.executeUpdate();
+                        (7, isTraverseable(traverseability, tileIds));
+                    preparedStatement.addBatch();
                 }
             }
+
+            preparedStatement.executeBatch();
         }
         catch (SQLException exception) {
             LOGGER.log(Level.SEVERE,
@@ -264,5 +267,25 @@ public class MapService extends Service
                        exception);
             // MYTODO  - throws
         }
+    }
+    
+    private List<Long> tileStringsToIds(final HashMap<String, Long> tileCodeToIdMap,
+                                        final List<String> tileStrings) {
+        List<Long> tileIds = new ArrayList<>();
+
+        for (final String tileString : tileStrings) {
+            try {
+                final Long tileId = Long.parseLong(tileString);
+                tileIds.add(tileId);
+            }
+            catch (NumberFormatException exception) {
+                final Long tileId = tileCodeToIdMap.get(tileString);
+                Assert.assertNotNull("Unknown tile code " + tileString + ".",
+                                     tileId);
+                tileIds.add(tileId);
+            }
+        }
+
+        return tileIds;
     }
 }
