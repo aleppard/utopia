@@ -5,12 +5,27 @@ CREATE TYPE direction_type AS ENUM ('north', 'east', 'south', 'west');
 
 CREATE TYPE tile_type AS ENUM ('land', 'water');
 
+-- Tile connectors specify a connection type between two edges of adjacent
+-- tiles, e.g. a tile with a riverlet on the south edge may only connect to
+-- another tile with a riverlet on its adjacent north edge.
+CREATE TABLE IF NOT EXISTS tile_connectors(
+       id SERIAL PRIMARY KEY,
+       code VARCHAR(32) NOT NULL UNIQUE,
+       description VARCHAR(128));
+
 -- @todo Move images into separate table.
 CREATE TABLE IF NOT EXISTS tiles(
        id SERIAL PRIMARY KEY,
        tile_type tile_type NOT NULL,
        is_traverseable BOOLEAN NOT NULL,
-       code VARCHAR(4) NOT NULL UNIQUE,
+       -- @todo If null then connects to anything (e.g. an overlay of a small
+       -- pebble has no edges).
+       -- There is a potential connector for each side of the tile.
+       north_connector_id INTEGER REFERENCES tile_connectors,
+       east_connector_id INTEGER REFERENCES tile_connectors,
+       south_connector_id INTEGER REFERENCES tile_connectors,
+       west_connector_id INTEGER REFERENCES tile_connectors,              
+       code VARCHAR(32) NOT NULL UNIQUE,
        image BYTEA,
        description VARCHAR(128));
 
