@@ -61,6 +61,8 @@ public class MapServlet extends HttpServlet
 
     /**
      * POST /map.json
+     *
+     * Upload a map which can be a list of tile IDs or tile codes for each square in the map.
      */
     @Override public void doPost(HttpServletRequest request,
                                  HttpServletResponse response)
