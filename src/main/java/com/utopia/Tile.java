@@ -7,6 +7,18 @@ public class Tile {
     public boolean isTraverseable;
 
     @JsonProperty
+    public String northConnectorCode;
+
+    @JsonProperty
+    public String eastConnectorCode;
+
+    @JsonProperty
+    public String southConnectorCode;
+
+    @JsonProperty
+    public String westConnectorCode;            
+    
+    @JsonProperty
     public String code;
 
     @JsonProperty
