@@ -21,6 +21,11 @@
     </servlet>
 
     <servlet>
+        <servlet-name>map_image</servlet-name>
+        <servlet-class>com.utopia.MapImageServlet</servlet-class>
+    </servlet>
+    
+    <servlet>
         <servlet-name>session</servlet-name>
         <servlet-class>com.utopia.SessionServlet</servlet-class>
     </servlet>
@@ -35,6 +40,11 @@
         <servlet-class>com.utopia.TileImageServlet</servlet-class>
     </servlet>    
 
+    <servlet>
+        <servlet-name>tile_connector</servlet-name>
+        <servlet-class>com.utopia.TileConnectorServlet</servlet-class>
+    </servlet>
+    
     <servlet-mapping>
         <servlet-name>avatar</servlet-name>
         <url-pattern>/api/v0/avatar.json</url-pattern>
@@ -51,6 +61,11 @@
     </servlet-mapping>
 
     <servlet-mapping>
+        <servlet-name>map_image</servlet-name>
+        <url-pattern>/api/v0/map.png</url-pattern>
+    </servlet-mapping>    
+
+    <servlet-mapping>
         <servlet-name>session</servlet-name>
         <url-pattern>/api/v0/session.json</url-pattern>
     </servlet-mapping>
@@ -58,6 +73,11 @@
     <servlet-mapping>
         <servlet-name>tile</servlet-name>
         <url-pattern>/api/v0/tile.json</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>tile_connector</servlet-name>
+        <url-pattern>/api/v0/tile_connector.json</url-pattern>
     </servlet-mapping>
 
     <servlet-mapping>
