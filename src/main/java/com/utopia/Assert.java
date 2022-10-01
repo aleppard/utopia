@@ -17,7 +17,7 @@ public class Assert {
 
     public static void fail(final String message) {
         try {
-            throw new RuntimeException();
+            throw new RuntimeException(message);
         }
         catch (Exception exception) {
             String logMessage;
@@ -41,8 +41,12 @@ public class Assert {
     }
 
     public static void assertNotNull(Object object) {
-        if (object == null) fail();
+        assertNotNull(null, object);
     }
+
+    public static void assertNotNull(final String message, Object object) {
+        if (object == null) fail(message);
+    }    
 
     public static void assertEquals(int expected, int actual) {
         if (expected != actual) {
