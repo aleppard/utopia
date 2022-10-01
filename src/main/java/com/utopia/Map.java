@@ -14,7 +14,7 @@ public class Map
     public int startY = 0;
     public int width = 0;
     public int height = 0;
-    public List<Integer>[][] tiles = null;
+    public List<Long>[][] tiles = null; // @todo Rename to tileIds.
 
     // @todo We serialise this as a number (0/1) rather than a boolean
     // (true/false) to save space. The following annotation does not seem
@@ -28,7 +28,7 @@ public class Map
         this.startY = startY;
         this.width = width;
         this.height = height;
-        this.tiles = (ArrayList<Integer>[][])new ArrayList[height][width];
+        this.tiles = (ArrayList<Long>[][])new ArrayList[height][width];
         this.isTraverseable = new short[height][width];
     }
 }
