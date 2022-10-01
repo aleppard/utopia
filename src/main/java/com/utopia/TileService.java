@@ -5,6 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,17 +14,73 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Access tile images and tile meta-data in the database.
  */
 public class TileService extends Service
 {
     private static final Logger LOGGER =
         Logger.getLogger(TileService.class.getName());
 
-    public HashMap<Integer, Boolean> getTraverseability() {
+    private TileConnectorService tileConnectorService =
+        new TileConnectorService();
+
+    /**
+     * Return map that maps tile codes to their IDs in the database.
+     * @todo Cache this?
+     */
+    public HashMap<String, Long> getCodeToIdMap() {
+        try (Connection connection = getConnection()) {            
+            HashMap<String, Long> map = new HashMap<>();
+            
+            PreparedStatement preparedStatement =
+                connection.prepareStatement
+                ("SELECT id, code FROM tiles");
+            ResultSet resultSet = preparedStatement.executeQuery();
+            
+            while (resultSet.next()) {
+                final long id = resultSet.getLong("id");
+                final String code = resultSet.getString("code");
+                map.put(code, id);
+            }
+            
+            return map;
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+            return null;
+        }
+    }
+
+    /**
+     * Return tile ID for tile with code or null if not found.
+     */
+    public Long getTileId(final String code) {
+        try (Connection connection = getConnection()) {            
+            PreparedStatement preparedStatement =
+                connection.prepareStatement
+                ("SELECT id FROM tiles WHERE code=? LIMIT 1");
+            preparedStatement.setString(1, code);
+            
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getLong("id");
+            }
+        }
+        catch (SQLException exception) {
+            LOGGER.log(Level.SEVERE,
+                       "SQL State: " + exception.getSQLState(),
+                       exception);
+        }
+
+        return null;
+    }
+    
+    public HashMap<Long, Boolean> getTraverseability() {
         try (Connection connection = getConnection()) {            
             // @todo Using an array would be better here.
-            HashMap<Integer, Boolean> traverseability = new HashMap<>();
+            HashMap<Long, Boolean> traverseability = new HashMap<>();
             
             PreparedStatement preparedStatement =
                 connection.prepareStatement
@@ -31,8 +88,9 @@ public class TileService extends Service
             ResultSet resultSet = preparedStatement.executeQuery();
             
             while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                boolean isTraverseable = resultSet.getBoolean("is_traverseable");
+                final long id = resultSet.getLong("id");
+                final boolean isTraverseable =
+                    resultSet.getBoolean("is_traverseable");
                 traverseability.put(id, isTraverseable);
             }
             
@@ -46,16 +104,33 @@ public class TileService extends Service
         }
     }
     
-    public void add(Tile tile) {
+    public void add(final List<Tile> tiles) {
+        final HashMap<String, Long> tileConnectorCodeToIdMap =
+            tileConnectorService.getCodeToIdMap();
+        
         try (Connection connection = getConnection()) {                    
             PreparedStatement preparedStatement =
                 connection.prepareStatement
-                ("INSERT INTO tiles (is_traverseable, code, description, tile_type) VALUES (?, ?, ?, ?::tile_type)");
-            preparedStatement.setBoolean(1, tile.isTraverseable);
-            preparedStatement.setString(2, tile.code);
-            preparedStatement.setString(3, tile.description);
-            preparedStatement.setString(4, "land");
-            preparedStatement.executeUpdate();
+                ("INSERT INTO tiles (tile_type, is_traverseable, north_connector_id, east_connector_id, south_connector_id, west_connector_id, code, description) VALUES (?::tile_type, ?, ?, ?, ?, ?, ?, ?)");
+
+            for (final Tile tile : tiles) {
+                preparedStatement.setString(1, "land");
+                preparedStatement.setBoolean(2, tile.isTraverseable);
+                preparedStatement.setObject
+                    (3, tileConnectorCodeToIdMap.get(tile.northConnectorCode), Types.BIGINT);
+                preparedStatement.setObject
+                    (4, tileConnectorCodeToIdMap.get(tile.eastConnectorCode), Types.BIGINT);
+                preparedStatement.setObject
+                    (5 ,tileConnectorCodeToIdMap.get(tile.southConnectorCode), Types.BIGINT);
+                preparedStatement.setObject
+                    (6, tileConnectorCodeToIdMap.get(tile.westConnectorCode), Types.BIGINT);
+                preparedStatement.setString(7, tile.code);
+                preparedStatement.setString(8, tile.description);
+
+                preparedStatement.addBatch();
+            }
+                
+            preparedStatement.executeBatch();
         }
         catch (SQLException exception) {
             LOGGER.log(Level.SEVERE,
@@ -70,7 +145,6 @@ public class TileService extends Service
                 connection.prepareStatement
                 ("SELECT image FROM tiles WHERE id=?");
             preparedStatement.setLong(1, id);
-            preparedStatement.executeQuery();
             
             ResultSet resultSet = preparedStatement.executeQuery();
             if (resultSet.next()) {
