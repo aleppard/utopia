@@ -14,7 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Access avatar images and avatar meta-data in the database.
  */
 public class AvatarService extends Service
 {
@@ -50,6 +50,7 @@ public class AvatarService extends Service
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
+            throw new RuntimeException(exception);            
         }
     }
     
@@ -61,19 +62,25 @@ public class AvatarService extends Service
         return userAvatarIds.get(index);
     }
     
-    public void add(Avatar avatar) {
+    public void add(final List<Avatar> avatars) {
         try (Connection connection = getConnection()) {                    
             PreparedStatement preparedStatement =
                 connection.prepareStatement
                 ("INSERT INTO avatars (description, avatar_type) VALUES (?, ?::avatar_type)");
-            preparedStatement.setString(1, avatar.description);
-            preparedStatement.setString(2, "user");
-            preparedStatement.executeUpdate();
+
+            for (final Avatar avatar : avatars) {
+                preparedStatement.setString(1, avatar.description);
+                preparedStatement.setString(2, "user");
+                preparedStatement.addBatch();
+            }
+                
+            preparedStatement.executeBatch();
         }
         catch (SQLException exception) {
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
+            throw new RuntimeException(exception);
         }
     }
 
@@ -94,10 +101,10 @@ public class AvatarService extends Service
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
+            throw new RuntimeException(exception);            
         }
 
-        // @todo
-        return null;
+        throw new RuntimeException("Avatar image not found.");
     }
 
     public void setImage(long id, byte[] image) {
@@ -111,6 +118,7 @@ public class AvatarService extends Service
             LOGGER.log(Level.SEVERE,
                        "SQL State: " + exception.getSQLState(),
                        exception);
+            throw new RuntimeException(exception);
         }            
     }
 }
