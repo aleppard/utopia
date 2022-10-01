@@ -25,7 +25,8 @@ public class AvatarImageServlet extends HttpServlet
     private ConfigurationService configurationService =
         new ConfigurationService();    
 
-    // Number of tile rows in a composite avatar image (south, west, east & norht).
+    // Number of tile rows in a composite avatar image (south, west, east &
+    // north).
     private final int AVATAR_ROW_TILE_COUNT = 4;
 
     // Number of tile columns in a composite avatar image (frames).
@@ -55,7 +56,11 @@ public class AvatarImageServlet extends HttpServlet
      * E1 E2 E3
      * N1 N2 N3
      *
-     * POST /avatar.png?id=...&count=...
+     * POST /avatar.png?id=...[&x=...][&y=...][&width=...][&height=...]
+     *
+     * @param id First id
+     * @param x, y, width, height Optional region in composite image to import
+     * in pixels.
      */
     @Override public void doPost(HttpServletRequest request,
                                  HttpServletResponse response)
@@ -63,30 +68,51 @@ public class AvatarImageServlet extends HttpServlet
 
         // @todo Secure this end-point.
         final String idString = request.getParameter("id");
-        final String countString = request.getParameter("count");
+        final String xString = request.getParameter("x");
+        final String yString = request.getParameter("y");
+        final String widthString = request.getParameter("width");
+        final String heightString = request.getParameter("height");
         
         try {
-            long firstAvatarId = Long.parseLong(idString);
-            final int count = Integer.parseInt(countString);
+            final long firstAvatarId = Long.parseLong(idString);
             final int tileSize = configurationService.getTileSize();
             final int avatarWidth = AVATAR_COLUMN_TILE_COUNT * tileSize;
             final int avatarHeight = AVATAR_ROW_TILE_COUNT * tileSize;
             
-            final BufferedImage compositeImage =
+            BufferedImage compositeImage =
                 ImageIO.read(request.getInputStream());
-            Assert.assertTrue(compositeImage.getWidth() % avatarWidth == 0);
-            Assert.assertTrue(compositeImage.getHeight() % avatarHeight == 0);
+            final int x = xString != null? Integer.parseInt(xString) : 0;
+            final int y = xString != null? Integer.parseInt(yString) : 0;
+            final int width =
+                widthString != null? Integer.parseInt(widthString) :
+                compositeImage.getWidth();
+            final int height =
+                heightString != null? Integer.parseInt(heightString) :
+                compositeImage.getHeight();            
 
-            final int columnCount = compositeImage.getWidth() / avatarWidth;
-            final int rowCount = compositeImage.getHeight() / avatarHeight;            
-            Assert.assertTrue(count <= rowCount * columnCount);
+            Assert.assertTrue(width % avatarWidth == 0);
+            Assert.assertTrue(height % avatarHeight == 0);
+
+            Assert.assertTrue(x + width <= compositeImage.getWidth());
+            Assert.assertTrue(y + height <= compositeImage.getHeight());
+
+            compositeImage =
+                compositeImage.getSubimage(x, 
+                                           y,
+                                           width,
+                                           height);
+            
+            final int columnCount = width / avatarWidth;
+            final int rowCount = height / avatarHeight;
+            final int count = rowCount * columnCount;
 
             int column = 0;
             int row = 0;
 
             // Iterate from left->right, top->down writing out the avatar
             // images from the composite image.
-            for (long avatarId = firstAvatarId; avatarId < (firstAvatarId + count);
+            for (long avatarId = firstAvatarId;
+                 avatarId < (firstAvatarId + count);
                  avatarId++) {
                 final BufferedImage avatarImage =
                     compositeImage.getSubimage(column * avatarWidth,
