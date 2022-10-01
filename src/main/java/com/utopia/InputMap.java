@@ -25,7 +25,7 @@ public class InputMap
     public int height = 0;
 
     @JsonProperty
-    public List<Integer>[][] tiles = null;
+    public List<String>[][] tiles = null;
 
     public InputMap() {};
     
@@ -34,6 +34,6 @@ public class InputMap
         this.startY = startY;
         this.width = width;
         this.height = height;
-        this.tiles = (ArrayList<Integer>[][])new ArrayList[height][width];
+        this.tiles = (ArrayList<String>[][])new ArrayList[height][width];
     }
 }
