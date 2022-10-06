@@ -11,9 +11,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import com.google.common.io.ByteStreams;
 
-// MYTODO rename to file servlet
 /**
  * Game servlet.
+ *
+ * @todo Rename to FileServlet.
  */
 public class GameServlet extends HttpServlet
 {

@@ -28,7 +28,9 @@ public class TileImageServlet extends HttpServlet
     private TileService tileService = new TileService();
     private ConfigurationService configurationService =
         new ConfigurationService();    
-
+    private AuthorisationService authorisationService =
+        new AuthorisationService(configurationService);
+    
     // @todo Generalise these iterators and re-use for AvatarImageServlet.
     
     /**
@@ -99,8 +101,9 @@ public class TileImageServlet extends HttpServlet
                                  HttpServletResponse response)
         throws IOException {
 
+        authorisationService.checkAuthorised(request);
+        
         // @todo Refactor this code with AvatarImageServlet.java.
-        // @todo Secure this end-point.
         final String idString = request.getParameter("id");
         final String xString = request.getParameter("x");
         final String yString = request.getParameter("y");

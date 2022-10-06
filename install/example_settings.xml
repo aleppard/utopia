@@ -8,6 +8,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
+        <utopia.authorisation_token>TOKEN</utopia.authorisation_token>
         <tomcat.user>utopia</tomcat.user>
         <tomcat.password>PASSWORD</tomcat.password>
         <tomcat.host>localhost</tomcat.host>
@@ -22,6 +23,7 @@
     <profile>
       <id>production</id>
       <properties>
+        <utopia.authorisation_token>TOKEN</utopia.authorisation_token>
         <tomcat.user>utopia</tomcat.user>
         <tomcat.password>PASSWORD</tomcat.password>
         <tomcat.host>localhost</tomcat.host>

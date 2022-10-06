@@ -41,4 +41,10 @@ public class ConfigurationService
         Assert.assertNotNull(tileSize);
         return Integer.parseInt(tileSize);
     }
+
+    public String getAuthorisationToken() {
+        final String token = properties.getProperty("authorisation_token");
+        Assert.assertNotNull(token);
+        return token;
+    }
 }

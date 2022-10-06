@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class TileServlet extends HttpServlet
 {
     private TileService service = new TileService();
+    private AuthorisationService authorisationService =
+        new AuthorisationService();
     
     /**
      * Add new tiles.
@@ -29,7 +31,8 @@ public class TileServlet extends HttpServlet
                                 HttpServletResponse response)
         throws IOException {
 
-        // @todo Secure this end-point.
+        authorisationService.checkAuthorised(request);
+        
         response.setContentType("application/json; charset=utf-8");
 
         final ObjectMapper mapper = new ObjectMapper()

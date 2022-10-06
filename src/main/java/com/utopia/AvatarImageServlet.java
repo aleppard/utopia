@@ -23,8 +23,10 @@ public class AvatarImageServlet extends HttpServlet
     
     private AvatarService avatarService = new AvatarService();    
     private ConfigurationService configurationService =
-        new ConfigurationService();    
-
+        new ConfigurationService();
+    private AuthorisationService authorisationService =
+        new AuthorisationService(configurationService);
+    
     // Number of tile rows in a composite avatar image (south, west, east &
     // north).
     private final int AVATAR_ROW_TILE_COUNT = 4;
@@ -66,7 +68,8 @@ public class AvatarImageServlet extends HttpServlet
                                  HttpServletResponse response)
         throws IOException {
 
-        // @todo Secure this end-point.
+        authorisationService.checkAuthorised(request);
+
         final String idString = request.getParameter("id");
         final String xString = request.getParameter("x");
         final String yString = request.getParameter("y");

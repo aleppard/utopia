@@ -19,6 +19,8 @@ public class MapServlet extends HttpServlet
        Logger.getLogger(MapServlet.class.getName());
 
     private MapService service = new MapService();
+    private AuthorisationService authorisationService =
+        new AuthorisationService();
     
     /**
      * Retrieve full map:
@@ -62,13 +64,15 @@ public class MapServlet extends HttpServlet
     /**
      * POST /map.json
      *
-     * Upload a map which can be a list of tile IDs or tile codes for each square in the map.
+     * Upload a map which can be a list of tile IDs or tile codes for each 
+     * square in the map.
      */
     @Override public void doPost(HttpServletRequest request,
                                  HttpServletResponse response)
         throws IOException {
 
-        // @todo Secure this end-point.
+        authorisationService.checkAuthorised(request);
+
         ObjectMapper mapper = new ObjectMapper();        
         InputMap map = mapper.readValue(request.getReader(), InputMap.class);
         service.setMap(map);
