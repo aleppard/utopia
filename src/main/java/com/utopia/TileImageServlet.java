@@ -126,8 +126,12 @@ public class TileImageServlet extends HttpServlet
         Assert.assertTrue(width % tileSize == 0);
         Assert.assertTrue(height % tileSize == 0);
         
-        Assert.assertTrue(x + width <= compositeImage.getWidth());
-        Assert.assertTrue(y + height <= compositeImage.getHeight());
+        Assert.assertTrue("Expecting " + x + " + " + width + " <= " +
+                          compositeImage.getWidth(),
+                          x + width <= compositeImage.getWidth());
+        Assert.assertTrue("Expecting " + y + " + " + height + " <= " +
+                          compositeImage.getHeight(),
+                          y + height <= compositeImage.getHeight());
         
         compositeImage =
             compositeImage.getSubimage(x, 
