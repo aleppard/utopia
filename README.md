@@ -5,7 +5,7 @@ Utopia is a 2D tile engine for the web that can be used as a platform for web ga
 1. To provide an instant game experience for the visitor with little to no wait time, and no need to create an account or sign-up.
 2. To leverage AI to create an extremely immersive and flexible game experience.
 
-![Screenshot!](/screenshot.jpg)
+![Screenshot!](/screenshot.png)
 
 ## Features
 
