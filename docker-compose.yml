@@ -1,0 +1,29 @@
+version: '3.1'
+services:
+  utopia:
+    build:
+      context: .
+      dockerfile: utopia.dockerfile
+    environment:
+      UTOPIA_DATABASE_NAME: utopia
+      UTOPIA_DATABASE_USER: utopia
+      UTOPIA_DATABASE_PASSWORD: ColamiSC($$@JF00
+      UTOPIA_DATABASE_HOST: db
+      UTOPIA_DATABASE_PORT: 5432
+    depends_on:
+      - db
+    ports:
+      - 80:8080
+
+  db:
+    build:
+      context: .
+      dockerfile: postgres.dockerfile
+    restart: always
+    environment:
+      POSTGRES_DB: utopia
+      POSTGRES_USER: utopia
+      POSTGRES_PASSWORD: ColamiSC($$@JF00
+    ports:
+      - 5432:5432
+

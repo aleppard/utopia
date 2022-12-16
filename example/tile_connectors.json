@@ -1,0 +1,22 @@
+[
+    {
+        "code":"grass",
+        "description": "Grass"
+    },
+    {
+        "code":"tree-top-horizontal",
+        "description": "Connect left-right top halves of tree"
+    },
+    {
+        "code":"tree-bottom-horizontal",
+        "description": "Connect left-right bottom halves of tree"
+    },
+    {
+        "code":"tree-left-vertical",
+        "description": "Connect top-bottom left halves of tree"
+    },
+    {
+        "code":"tree-right-vertical",
+        "description": "Connect top-bottom right halves of tree"
+    }
+]

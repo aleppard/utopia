@@ -1,0 +1,94 @@
+[
+    {
+        "isTraverseable":true,
+        "code":"grass",
+        "description":"Grass",
+        "northConnectorCode": "grass",
+        "eastConnectorCode": "grass",
+        "southConnectorCode": "grass",
+        "westConnectorCode": "grass"      
+    },
+    {
+        "isTraverseable":true,
+        "code":"small-mushrooms",        
+        "description":"Small mushrooms"    
+    },
+    {
+        "isTraverseable":true,
+        "code":"lots-of-pebbles",
+        "description":"Lots of pebbles"       
+    },
+    {
+        "isTraverseable":true,
+        "code":"small-pebble",
+        "description":"Small pebble"     
+    },
+    {
+        "isTraverseable":true,
+        "code":"medium-pebble",
+        "description":"Medium pebble"
+    },
+    {
+        "isTraverseable":true,
+        "code":"big-pebble",
+        "description":"Big pebble"      
+    },
+    {
+        "isTraverseable":true,
+        "code":"clump",
+        "description":"Small clump of grass"      
+    },
+    {
+        "isTraverseable":true,
+        "code":"medium-clump",
+        "description":"Medium clump of grass"        
+    },
+    {
+        "isTraverseable":true,
+        "code":"large-clump",
+        "description":"Large clump of grass"
+    },
+    {
+        "isTraverseable":true,
+        "code":"mushroom",
+        "description":"Mushroom"
+    },
+    {
+        "isTraverseable":true,
+        "code":"little-mushroom",
+        "description":"Little mushroom"    
+    },
+    {
+        "isTraverseable":true,
+        "code":"lillies",
+        "description":"Lillies"       
+    },
+    {
+        "isTraverseable":false,
+        "code":"tree-top-left",
+        "description":"",
+        "eastConnectorCode":"tree-top-horizontal",
+        "southConnectorCode":"tree-left-vertical"
+    },
+    {
+        "isTraverseable":false,
+        "code":"tree-top-right",
+        "description":"",
+        "westConnectorCode":"tree-top-horizontal",
+        "southConnectorCode":"tree-right-vertical"        
+    },
+    {
+        "isTraverseable":false,
+        "code":"tree-bottom-left",
+        "description":"",
+        "eastConnectorCode":"tree-bottom-horizontal",
+        "northConnectorCode":"tree-left-vertical"        
+    },
+    {
+        "isTraverseable":false,
+        "code":"tree-bottom-right",
+        "description":"",
+        "westConnectorCode":"tree-bottom-horizontal",
+        "northConnectorCode":"tree-right-vertical"        
+    }
+]
