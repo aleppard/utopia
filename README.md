@@ -45,15 +45,13 @@ You can build with the following command:
 The simplest way to run is using Docker. Install [Docker](https://www.docker.com/), build as above, and run the following command:
 
     docker-compose -f docker-compose.yml up
-  
-or
-
-    sudo docker-compose -f docker-compose.yml up
 
 To start in the background, and to stop you can run respectively:
 
     docker-compose -f docker-compose.yml up -d
     docker-compose -f docker-compose.yml down
+
+You may need to prefix the `docker` commands with `sudo`.
 
 Once running you can configure it (e.g. uploading the map) using the following example configuration script (you will need to install [curl](https://curl.se/) to run):
 
@@ -69,19 +67,21 @@ The best way for development is to deploy to a local Tomcat server.
 Build as above.
 Install and configure [Apache Tomcat](https://tomcat.apache.org/).
 Install and configure [Postgres](https://www.postgresql.org/).
-Create ~/.m2/settings.xml and set Tomcat and Postgres credentials. See example/settings.xml for an example file.
+Create `~/.m2/settings.xml` using `example/settings.xml` as a guide. Set Tomcat and Postgres credentials.
 
 The first build and deployment can be made by running:
 
-    mvn package
-    mvn cargo:deploy 
+    mvn package cargo:deploy
     
 Then to re-deploy:
     
-    mvn package
-    mvn cargo:redeploy 
+    mvn package cargo:redeploy
 
-Pass -P argument to the deploy command to deploy to a production instance, otherwise it will deploy to the development instance. See example_settings.xml for more information.
+Pass `-Pproduction` argument to the command to build a
+production version and deploy the the production instance. Otherwise
+it will build the development version with front-end symbols and
+deploy to the development instance. See `example_settings.xml` for
+more information.
 
 Once running you can configure it (e.g. uploading the map) using the following example configuration script (you will need to install [curl](https://curl.se/) to run):
 
